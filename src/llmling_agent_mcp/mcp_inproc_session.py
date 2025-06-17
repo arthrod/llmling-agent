@@ -12,6 +12,7 @@ import anyenv
 
 from llmling_agent_mcp import constants
 from llmling_agent_mcp.log import get_logger
+from security import safe_command
 
 
 logger = get_logger(__name__)
@@ -50,8 +51,7 @@ class MCPInProcSession:
         """Start the server process."""
         env = {**os.environ, "PYTHONUNBUFFERED": "1"}
         logger.debug("Starting server with command: %s", self.server_command)
-        self.process = subprocess.Popen(
-            self.server_command,
+        self.process = safe_command.run(subprocess.Popen, self.server_command,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

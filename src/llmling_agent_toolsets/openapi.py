@@ -16,6 +16,7 @@ from upathtools import read_path
 from llmling_agent.log import get_logger
 from llmling_agent.resource_providers.base import ResourceProvider
 from llmling_agent.tools.base import Tool
+from security import safe_command
 
 
 if TYPE_CHECKING:
@@ -103,7 +104,7 @@ def dereference_openapi(
     cmd.extend(["--output", output_path])
 
     try:
-        subprocess.run(cmd, check=True)
+        safe_command.run(subprocess.run, cmd, check=True)
         with UPath(output_path).open(encoding="utf-8") as f:
             spec = f.read()
     finally:
