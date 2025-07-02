@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 
 import requests
+from security import safe_requests
 
 
 resp = requests.post(
@@ -52,7 +53,7 @@ while True:
 print("Authentication success!")
 
 # Get a copilot token with the access token
-resp = requests.get(
+resp = safe_requests.get(
     "https://api.github.com/copilot_internal/v2/token",
     headers={
         "authorization": f"token {access_token}",
