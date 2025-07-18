@@ -130,7 +130,7 @@ class TextLogProvider(StorageProvider):
         self.content_template = self._load_template(config.template)
 
         # Configure Jinja env with empty string for undefined
-        env = Environment(undefined=EmptyStringUndefined, enable_async=True)
+        env = Environment(undefined=EmptyStringUndefined, enable_async=True, autoescape=True)
         self.path_template = env.from_string(config.path)
 
         self._entries: list[dict[str, Any]] = []
