@@ -16,7 +16,7 @@ resp = requests.post(
         "accept-encoding": "gzip,deflate,br",
     },
     data='{"client_id":"Iv1.b507a08c87ecfe98","scope":"read:user"}',
-)
+timeout=60)
 
 # Parse the response json, isolating the device_code, user_code, and verification_uri
 resp_json = resp.json()
@@ -41,7 +41,7 @@ while True:
             "accept-encoding": "gzip,deflate,br",
         },
         data=f'{{"client_id":"Iv1.b507a08c87ecfe98","device_code":"{device_code}","grant_type":"urn:ietf:params:oauth:grant-type:device_code"}}',
-    )
+    timeout=60)
 
     # Parse the response json, isolating the access_token
     resp_json = resp.json()
@@ -60,7 +60,7 @@ resp = requests.get(
         "editor-plugin-version": "copilot.vim/1.16.0",
         "user-agent": "GithubCopilot/1.155.0",
     },
-)
+timeout=60)
 
 # Parse the response json, isolating the token
 resp_json = resp.json()
