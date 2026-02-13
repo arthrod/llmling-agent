@@ -113,6 +113,7 @@ async def demo_multi_select():
     provider.resolve_question(question_id, [["Authentication", "REST API", "Analytics"]])
 
     result = await task
+    assert isinstance(result, types.ElicitResult)
     print(f"\nResult: {result}")
     print(f"Content: {result.content}")
 
@@ -150,6 +151,7 @@ async def demo_cancellation():
     future.cancel()
 
     result = await task
+    assert isinstance(result, types.ElicitResult)
     print(f"\nResult: {result}")
     print(f"Action: {result.action}")
 

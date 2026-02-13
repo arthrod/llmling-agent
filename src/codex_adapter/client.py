@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 import anyenv
 from pydantic import BaseModel, TypeAdapter
 
+from codex_adapter import AgentMessageDeltaData, AgentMessageDeltaEvent, TurnErrorEvent
 from codex_adapter.codex_types import HttpMcpServer, StdioMcpServer
 from codex_adapter.events import get_text_delta, parse_codex_event
 from codex_adapter.exceptions import CodexProcessError, CodexRequestError
@@ -592,14 +593,11 @@ class CodexClient:
             approval_policy=approval_policy,
             output_schema=result_type,  # Auto-generate schema from type
         ):
-            if event.event_type == "item/agentMessage/delta":
-                response_text += get_text_delta(event)
-            elif event.event_type == "turn/error":
-                if isinstance(event.data, TurnErrorData):
-                    error_msg = event.data.error
-                else:
-                    error_msg = "Unknown error"
-                raise CodexRequestError(-32000, error_msg)
+            match event:
+                case AgentMessageDeltaEvent(data=AgentMessageDeltaData(delta=delta)):
+                    response_text += delta
+                case TurnErrorEvent(data=TurnErrorData(error=error)):
+                    raise CodexRequestError(-32000, error)
 
         # Parse into typed model
         return result_type.model_validate_json(response_text)
@@ -707,10 +705,8 @@ class CodexClient:
 
         request_id = self._request_id
         self._request_id += 1
-
         future: asyncio.Future[Any] = asyncio.Future()
         self._pending_requests[request_id] = future
-
         # Serialize params to dict if provided
         params_dict: dict[str, Any] = {}
         if params is not None:
@@ -806,7 +802,6 @@ class CodexClient:
             # Route event to appropriate turn queue
             thread_id = params.get("threadId")
             turn_id = params.get("turnId")
-
             # Also check nested turn object (some events have it there)
             if not turn_id and "turn" in params:
                 turn_data = params.get("turn", {})
