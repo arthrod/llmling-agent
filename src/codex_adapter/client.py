@@ -736,7 +736,7 @@ class CodexClient:
                 if not line_bytes:
                     break
 
-                line = line_bytes.decode("utf-8").strip()
+                line = line_bytes.decode().strip()
                 if not line or line == "null":
                     continue
 
@@ -767,16 +767,9 @@ class CodexClient:
                 response = JsonRpcResponse.model_validate(message)
                 request_id = response.id
                 future = self._pending_requests.pop(request_id, None)
-
                 if future and not future.done():
-                    if response.error:
-                        future.set_exception(
-                            CodexRequestError(
-                                response.error.code,
-                                response.error.message,
-                                response.error.data,
-                            )
-                        )
+                    if err := response.error:
+                        future.set_exception(CodexRequestError(err.code, err.message, err.data))
                     else:
                         future.set_result(response.result)
             except Exception as exc:  # noqa: BLE001
@@ -790,15 +783,12 @@ class CodexClient:
             return
 
         # Notification (has "method" field, no "id")
-        if "method" in message:
-            method = message["method"]
+        if method := message.get("method"):
             params = message.get("params") or {}
             event = parse_codex_event(method, params)
-
             # Skip legacy V1 events (parse_codex_event returns None for these)
             if event is None:
                 return
-
             # Route event to appropriate turn queue
             thread_id = params.get("threadId")
             turn_id = params.get("turnId")
