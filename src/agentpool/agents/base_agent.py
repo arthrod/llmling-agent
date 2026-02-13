@@ -254,12 +254,12 @@ class BaseAgent[TDeps = None, TResult = str](MessageNode[TDeps, TResult]):
 
     @overload
     def __and__(  # if other doesnt define deps, we take the agents one
-        self, other: ProcessorCallback[Any] | Team[TDeps] | MessageNode[TDeps, Any]
+        self, other: ProcessorCallback[Any] | MessageNode[TDeps, Any]
     ) -> Team[TDeps]: ...
 
     @overload
     def __and__(  # otherwise, we dont know and deps is Any
-        self, other: ProcessorCallback[Any] | Team[Any] | MessageNode[Any, Any]
+        self, other: ProcessorCallback[Any] | MessageNode[Any, Any]
     ) -> Team[Any]: ...
 
     def __and__(self, other: MessageNode[Any, Any] | ProcessorCallback[Any]) -> Team[Any]:
