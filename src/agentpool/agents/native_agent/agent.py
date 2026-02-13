@@ -917,7 +917,9 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
         from tokonomics.model_discovery import get_all_models
 
         delta = timedelta(days=200)
-        return await get_all_models(providers=self._providers or ["models.dev"], max_age=delta)
+        if self._providers:
+            return await get_all_models(providers=self._providers, max_age=delta)
+        return await get_all_models(providers=["models.dev"], max_age=delta)
 
     async def get_modes(self) -> list[ModeCategory]:
         """Get available mode categories for this agent."""
