@@ -181,7 +181,7 @@ def agui_to_native_event(event: BaseEvent) -> RichAgentStreamEvent[Any] | None: 
             return CustomEvent(event_data=delta, event_type="state_delta", source="ag-ui")
 
         case MessagesSnapshotEvent(messages=messages):
-            data = [m.model_dump() if hasattr(m, "model_dump") else m for m in messages]
+            data = [m.model_dump() for m in messages]
             return CustomEvent(event_data=data, event_type="messages_snapshot", source="ag-ui")
 
         # === Special Events ===

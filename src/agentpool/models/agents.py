@@ -352,14 +352,7 @@ class NativeAgentConfig(BaseAgentConfig):
         Returns:
             List of AbstractBuiltinTool instances (WebSearchTool, etc.)
         """
-        builtin_tools: list[Any] = []
-        for tool_config in self.tools:
-            if isinstance(tool_config, BaseBuiltinToolConfig):
-                try:
-                    builtin_tools.append(tool_config.get_builtin_tool())
-                except Exception:
-                    logger.exception("Failed to load builtin tool", config=tool_config)
-        return builtin_tools
+        return [i.get_builtin_tool() for i in self.tools if isinstance(i, BaseBuiltinToolConfig)]
 
     def get_session_config(self) -> MemoryConfig:
         """Get resolved memory configuration."""
