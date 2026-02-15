@@ -58,21 +58,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -111,16 +124,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -156,8 +187,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -206,6 +251,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -775,7 +821,7 @@
     },
     "ACPAgentWorkerConfig": {
       "additionalProperties": false,
-      "description": "Configuration for ACP agent workers.\n\nACP agent workers allow using external ACP-compatible agents as tools.\nUnlike regular agents, ACP agents manage their own history server-side,\nso history options are not available.",
+      "description": "ACP agent workers.",
       "properties": {
         "name": {
           "description": "Name of the node to use as a worker.",
@@ -910,21 +956,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -963,16 +1022,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -1008,8 +1085,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -1058,6 +1149,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -1334,7 +1426,7 @@
     },
     "AGUIAgentWorkerConfig": {
       "additionalProperties": false,
-      "description": "Configuration for AG-UI agent workers.\n\nAG-UI agent workers allow using remote AG-UI protocol servers as tools.\nLike ACP agents, they manage their own state server-side.",
+      "description": "AG-UI agent workers.",
       "properties": {
         "name": {
           "description": "Name of the node to use as a worker.",
@@ -1568,7 +1660,7 @@
     },
     "AgentWorkerConfig": {
       "additionalProperties": false,
-      "description": "Configuration for agent workers.\n\nAgent workers provide advanced features like history management and\ncontext sharing between agents.",
+      "description": "Agent workers.",
       "properties": {
         "name": {
           "description": "Name of the node to use as a worker.",
@@ -1664,21 +1756,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -1717,16 +1822,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -1762,8 +1885,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -1812,6 +1949,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -2667,21 +2805,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -2720,16 +2871,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -2765,8 +2934,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -2815,6 +2998,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -4128,21 +4312,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -4181,16 +4378,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -4226,8 +4441,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -4276,6 +4505,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -6932,21 +7162,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -6985,16 +7228,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -7030,8 +7291,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -7080,6 +7355,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -8263,21 +8539,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -8316,16 +8605,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -8361,8 +8668,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -8411,6 +8732,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -9005,21 +9327,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -9058,16 +9393,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -9103,8 +9456,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -9153,6 +9520,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -9554,8 +9922,16 @@
         "max_thinking_tokens": {
           "anyOf": [
             {
-              "minimum": 1000,
-              "type": "integer"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "const": "adaptive",
+                  "type": "string"
+                }
+              ],
+              "ge": 1000
             },
             {
               "type": "null"
@@ -9566,7 +9942,7 @@
           "examples": [
             5000,
             10000,
-            50000
+            "adaptive"
           ],
           "title": "Max Thinking Tokens"
         },
@@ -9802,13 +10178,9 @@
               {
                 "type": "subagent"
               },
-              {
-                "type": "agent_management"
-              },
               "webbrowser:open",
               {
                 "import_path": "webbrowser:open",
-                "name": "web_browser",
                 "type": "import"
               }
             ]
@@ -10675,21 +11047,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -10728,16 +11113,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -10773,8 +11176,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -10823,6 +11240,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -11476,21 +11894,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -11529,16 +11960,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -11574,8 +12023,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -11624,6 +12087,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -12734,21 +13198,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -12787,16 +13264,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -12832,8 +13327,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -12882,6 +13391,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -19919,21 +20429,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -19972,16 +20495,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -20017,8 +20558,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -20067,6 +20622,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -21926,21 +22482,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -21979,16 +22548,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -22024,8 +22611,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -22074,6 +22675,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -23647,21 +24249,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -23700,16 +24315,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -23745,8 +24378,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -23795,6 +24442,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -26159,21 +26807,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -26212,16 +26873,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -26257,8 +26936,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -26307,6 +27000,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -28797,34 +29491,6 @@
           "title": "Enable memory",
           "type": "boolean"
         },
-        "max_tokens": {
-          "default": null,
-          "description": "Maximum number of tokens to keep in context window.",
-          "examples": [
-            1000,
-            4000,
-            8000
-          ],
-          "title": "Maximum context tokens",
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
-        "max_messages": {
-          "default": null,
-          "description": "Maximum number of messages to keep in context window.",
-          "examples": [
-            10,
-            50,
-            100
-          ],
-          "title": "Maximum message count",
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
         "session": {
           "anyOf": [
             {
@@ -28851,6 +29517,28 @@
             "string",
             "null"
           ]
+        },
+        "history_processors": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "List of import paths to history processor callables.\n\nHistory processors are applied by pydantic-ai before each model call to\ntransform message history. They can:\n- Filter messages based on content or metadata\n- Truncate or summarize old messages\n- Make context-aware decisions using RunContext (usage, deps, model info)\n\nEach processor must be callable and accept one of these signatures:\n- def processor(messages: list[ModelMessage]) -> list[ModelMessage]\n- async def processor(messages: list[ModelMessage]) -> list[ModelMessage]\n- def processor(ctx: RunContext, messages: list[ModelMessage]) -> list[ModelMessage]\n- async def processor(ctx: RunContext, messages: list[ModelMessage]) -> list[ModelMessage]\n\nSee: https://ai.pydantic.dev/history-processors/\n\nExecution Order\n~~~~~~~~~~~~~~~\nWhen both CompactionPipeline and history processors are configured:\n1. CompactionPipeline (if configured) - Applied by MessageHistory.get_history()\n   BEFORE agentlet creation\n2. History Processors (pydantic-ai native) - Applied by ModelRequestNode\n   during model request preparation\n\nThis allows CompactionPipeline to handle declarative transformations (filtering,\ntruncating) while history processors implement context-aware logic (token-aware\nfiltering, summarization, dynamic decisions).\n\nSecurity\n~~~~~~~~\nHistory processors import arbitrary code from your project. Consider these risks:\n\n- Malicious imports: If you use configuration from untrusted sources, imported\n  modules could execute harmful code. Always review import paths before deployment.\n- Side effects: Processors can modify state, make network calls, or access\n  files. This may cause unexpected behavior or data leakage.\n- Denial-of-service: Slow or infinite-loop processors can block model calls.\n\nBest practices for security:\n- Use pure functions with no side effects when possible\n- Validate and sanitize processor inputs (message content, RunContext data)\n- Avoid network calls or file I/O within processors\n- Use isolated environments for untrusted configurations\n- Review and test all imported processor modules\n- Keep processors deterministic (same inputs = same outputs)\n\nExample processors:\n```python\n# my_processors.py\ndef keep_recent_messages(messages: list[ModelMessage]) -> list[ModelMessage]:\n    return messages[-10:] if len(messages) > 10 else messages\n\nasync def filter_thinking(messages: list[ModelMessage]) -> list[ModelMessage]:\n    filtered = []\n    for msg in messages:\n        if isinstance(msg, ModelResponse):\n            has_content = any(p for p in msg.parts if not p.is_thinking())\n            if has_content:\n                filtered.append(msg)\n        else:\n            filtered.append(msg)\n    return filtered\n\ndef token_aware_filter(\n    ctx: RunContext[None],\n    messages: list[ModelMessage],\n) -> list[ModelMessage]:\n    if ctx.usage.total_tokens > 8000:\n        return messages[-3:]\n    return messages\n```",
+          "examples": [
+            [
+              "my_processors:keep_recent_messages",
+              "my_module:summarize_old"
+            ]
+          ],
+          "title": "History processors"
         }
       },
       "title": "MemoryConfig",
@@ -29488,21 +30176,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -29541,16 +30242,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -29586,8 +30305,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -29636,6 +30369,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -30565,6 +31299,12 @@
             "null"
           ]
         },
+        "timeout": {
+          "default": 60,
+          "description": "Timeout for the sandbox.",
+          "title": "Timeout",
+          "type": "integer"
+        },
         "idle_timeout": {
           "default": null,
           "description": "Idle timeout in seconds.",
@@ -30804,21 +31544,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -30857,16 +31610,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -30902,8 +31673,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -30952,6 +31737,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -31978,11 +32764,25 @@
             ],
             [
               {
-                "import_path": "webbrowser:open",
+                "description": null,
+                "enabled": true,
+                "hints": null,
+                "import_path": "webbrowser.open",
+                "instructions": null,
+                "metadata": {},
                 "name": "web_browser",
+                "requires_confirmation": false,
                 "type": "import"
               },
               {
+                "description": null,
+                "enabled": true,
+                "environment": null,
+                "instructions": null,
+                "metadata": {},
+                "name": null,
+                "output_limit": null,
+                "requires_confirmation": false,
                 "timeout": 30.0,
                 "type": "bash"
               }
@@ -32363,12 +33163,13 @@
           "title": "Knowledge sources"
         },
         "workers": {
-          "description": "Worker agents which will be available as tools.\n\nDocs: https://phil65.github.io/agentpool/YAML%20Configuration/worker_configuration/",
+          "description": "Worker agents which will be available as tools.\n\nCan be worker config objects or plain strings (agent names, resolved as AgentWorkerConfig).\n\nDocs: https://phil65.github.io/agentpool/YAML%20Configuration/worker_configuration/",
           "documentation_url": "https://phil65.github.io/agentpool/YAML%20Configuration/worker_configuration/",
           "examples": [
             [
               {
                 "name": "web_agent",
+                "pass_message_history": false,
                 "reset_history_on_run": true,
                 "type": "agent"
               }
@@ -32378,30 +33179,41 @@
                 "name": "analysis_team",
                 "type": "team"
               }
+            ],
+            [
+              "web_agent",
+              "code_analyzer"
             ]
           ],
           "items": {
-            "discriminator": {
-              "mapping": {
-                "acp_agent": "#/$defs/ACPAgentWorkerConfig",
-                "agent": "#/$defs/AgentWorkerConfig",
-                "agui_agent": "#/$defs/AGUIAgentWorkerConfig",
-                "team": "#/$defs/TeamWorkerConfig"
-              },
-              "propertyName": "type"
-            },
-            "oneOf": [
+            "anyOf": [
               {
-                "$ref": "#/$defs/TeamWorkerConfig"
+                "discriminator": {
+                  "mapping": {
+                    "acp_agent": "#/$defs/ACPAgentWorkerConfig",
+                    "agent": "#/$defs/AgentWorkerConfig",
+                    "agui_agent": "#/$defs/AGUIAgentWorkerConfig",
+                    "team": "#/$defs/TeamWorkerConfig"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/TeamWorkerConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/AgentWorkerConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/ACPAgentWorkerConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/AGUIAgentWorkerConfig"
+                  }
+                ]
               },
               {
-                "$ref": "#/$defs/AgentWorkerConfig"
-              },
-              {
-                "$ref": "#/$defs/ACPAgentWorkerConfig"
-              },
-              {
-                "$ref": "#/$defs/AGUIAgentWorkerConfig"
+                "type": "string"
               }
             ]
           },
@@ -33768,21 +34580,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -33821,16 +34646,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -33866,8 +34709,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -33916,6 +34773,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -34596,21 +35454,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -34649,16 +35520,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -34694,8 +35583,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -34744,6 +35647,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -38528,18 +39432,6 @@
         "sandbox": {
           "$ref": "#/$defs/SandboxConfig",
           "description": "Sandbox restrictions configuration."
-        },
-        "sandbox_timeout": {
-          "default": 300.0,
-          "description": "How long the sandbox stays alive in seconds.",
-          "examples": [
-            300.0,
-            600.0,
-            3600.0
-          ],
-          "exclusiveMinimum": 0.0,
-          "title": "Sandbox Lifetime",
-          "type": "number"
         }
       },
       "title": "SRTExecutionEnvironmentConfig",
@@ -40190,21 +41082,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -40243,16 +41148,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -40288,8 +41211,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -40338,6 +41275,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -44065,21 +45003,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -44118,16 +45069,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -44163,8 +45132,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -44213,6 +45196,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -44307,7 +45291,7 @@
     },
     "TeamWorkerConfig": {
       "additionalProperties": false,
-      "description": "Configuration for team workers.\n\nTeam workers allow using entire teams as tools for other nodes.",
+      "description": "Team workers.",
       "properties": {
         "name": {
           "description": "Name of the node to use as a worker.",
@@ -45987,21 +46971,34 @@
           "examples": [
             [
               {
+                "enabled": true,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "daily_check",
                 "prompt": "Daily status update",
                 "schedule": "0 9 * * *",
+                "skip_missed": false,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
+                "timezone": null,
                 "type": "time"
               }
             ],
             [
               {
+                "debounce": 1600,
+                "enabled": true,
                 "extensions": [
                   ".py"
                 ],
+                "ignore_paths": null,
+                "include_metadata": true,
+                "include_timestamp": true,
                 "name": "code_watcher",
                 "paths": [
                   "./src"
                 ],
+                "recursive": true,
+                "template": "\n{%- if include_timestamp %}at {{ timestamp }}{% endif %}\nEvent from {{ source }}:\n{%- if include_metadata %}\nMetadata:\n{% for key, value in metadata.items() %}\n{{ key }}: {{ value }}\n{% endfor %}\n{% endif %}\n{{ content }}\n",
                 "type": "file"
               }
             ]
@@ -46040,16 +47037,34 @@
             [
               {
                 "connection_type": "run",
+                "delay": null,
+                "exit_condition": null,
+                "filter_condition": null,
                 "name": "output_agent",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
+                "transform": null,
                 "type": "node",
                 "wait_for_completion": true
               }
             ],
             [
               {
+                "delay": null,
+                "encoding": "utf-8",
+                "exit_condition": null,
+                "filter_condition": null,
                 "path": "logs/messages.txt",
+                "priority": 0,
+                "queue_strategy": "latest",
+                "queued": false,
+                "stop_condition": null,
                 "template": "{{ message.content }}",
-                "type": "file"
+                "transform": null,
+                "type": "file",
+                "wait_for_completion": true
               }
             ]
           ],
@@ -46085,8 +47100,22 @@
             ],
             [
               {
+                "auth": {
+                  "oauth": false,
+                  "persist": "keyring",
+                  "redirect_path": "/callback",
+                  "redirect_port": 3030,
+                  "scope": null
+                },
+                "disabled_tools": null,
+                "enabled": true,
+                "enabled_tools": null,
+                "env": null,
+                "headers": null,
+                "name": null,
+                "timeout": 60.0,
                 "type": "streamable-http",
-                "url": "http://mcp.example.com"
+                "url": "http://mcp.example.com/"
               }
             ]
           ],
@@ -46135,6 +47164,7 @@
           "examples": [
             [
               {
+                "enabled": true,
                 "handler": "simple",
                 "type": "builtin"
               }
@@ -46979,6 +48009,12 @@
           },
           "title": "Ports",
           "type": "array"
+        },
+        "timeout": {
+          "default": 60,
+          "description": "Timeout for the sandbox.",
+          "title": "Timeout",
+          "type": "integer"
         },
         "language": {
           "default": "python",
@@ -48045,29 +49081,36 @@
           "type": "string"
         },
         "workers": {
-          "description": "List of workers to register as tools.",
+          "description": "List of workers to register as tools. Can be config objects or plain agent names.",
           "items": {
-            "discriminator": {
-              "mapping": {
-                "acp_agent": "#/$defs/ACPAgentWorkerConfig",
-                "agent": "#/$defs/AgentWorkerConfig",
-                "agui_agent": "#/$defs/AGUIAgentWorkerConfig",
-                "team": "#/$defs/TeamWorkerConfig"
-              },
-              "propertyName": "type"
-            },
-            "oneOf": [
+            "anyOf": [
               {
-                "$ref": "#/$defs/TeamWorkerConfig"
+                "discriminator": {
+                  "mapping": {
+                    "acp_agent": "#/$defs/ACPAgentWorkerConfig",
+                    "agent": "#/$defs/AgentWorkerConfig",
+                    "agui_agent": "#/$defs/AGUIAgentWorkerConfig",
+                    "team": "#/$defs/TeamWorkerConfig"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/TeamWorkerConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/AgentWorkerConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/ACPAgentWorkerConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/AGUIAgentWorkerConfig"
+                  }
+                ]
               },
               {
-                "$ref": "#/$defs/AgentWorkerConfig"
-              },
-              {
-                "$ref": "#/$defs/ACPAgentWorkerConfig"
-              },
-              {
-                "$ref": "#/$defs/AGUIAgentWorkerConfig"
+                "type": "string"
               }
             ]
           },
