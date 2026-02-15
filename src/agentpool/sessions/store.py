@@ -87,18 +87,6 @@ class SessionStore(Protocol):
         """
         ...
 
-    @abstractmethod
-    async def cleanup_expired(self, max_age_hours: int = 24) -> int:
-        """Remove sessions older than max_age.
-
-        Args:
-            max_age_hours: Maximum session age in hours
-
-        Returns:
-            Number of sessions removed
-        """
-        ...
-
 
 class MemorySessionStore:
     """In-memory session store for testing and development."""
@@ -144,20 +132,3 @@ class MemorySessionStore:
                 continue
             result.append(session_id)
         return result
-
-    async def cleanup_expired(self, max_age_hours: int = 24) -> int:
-        from agentpool.utils.time_utils import get_now
-
-        now = get_now()
-        expired = []
-        for session_id, data in self._sessions.items():
-            age_hours = (now - data.last_active).total_seconds() / 3600
-            if age_hours > max_age_hours:
-                expired.append(session_id)
-
-        for session_id in expired:
-            del self._sessions[session_id]
-
-        if expired:
-            logger.info("Cleaned up expired sessions", count=len(expired))
-        return len(expired)

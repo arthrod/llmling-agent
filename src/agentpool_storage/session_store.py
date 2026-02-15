@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import TYPE_CHECKING, Self
 
 from agentpool.log import get_logger
 from agentpool.sessions.models import SessionData
-from agentpool.utils.time_utils import get_now
 from agentpool_storage.sql_provider.models import Session
 
 
@@ -209,31 +207,6 @@ class SQLSessionStore:
             result = await session.execute(stmt)
             # When selecting a single column, scalars() gives us the values directly
             return list(result.scalars().all())
-
-    async def cleanup_expired(self, max_age_hours: int = 24) -> int:
-        """Remove sessions older than max_age.
-
-        Args:
-            max_age_hours: Maximum session age in hours
-
-        Returns:
-            Number of sessions removed
-        """
-        from sqlalchemy import delete
-        from sqlalchemy.ext.asyncio import AsyncSession
-
-        engine = self._get_engine()
-        cutoff = get_now() - timedelta(hours=max_age_hours)
-
-        async with AsyncSession(engine) as session:
-            stmt = delete(Session).where(Session.last_active < cutoff)  # type: ignore[arg-type]
-            result = await session.execute(stmt)
-            await session.commit()
-
-            count = result.rowcount or 0  # type: ignore[attr-defined]
-            if count > 0:
-                logger.info("Cleaned up expired sessions", count=count)
-            return count
 
     async def get_all(
         self,

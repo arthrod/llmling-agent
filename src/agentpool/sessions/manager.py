@@ -208,14 +208,3 @@ class SessionManager:
             pool_id=self._pool_id,
             agent_name=agent_name,
         )
-
-    async def cleanup_expired(self, max_age_hours: int = 24) -> int:
-        """Remove expired sessions from store.
-
-        Args:
-            max_age_hours: Maximum session age in hours
-
-        Returns:
-            Number of sessions removed
-        """
-        return await self._store.cleanup_expired(max_age_hours)

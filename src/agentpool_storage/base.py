@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Self, assert_never
 
 from agentpool.utils.tasks import TaskManager
-from agentpool_storage.models import GroupBy
 
 
 if TYPE_CHECKING:
@@ -20,7 +19,7 @@ if TYPE_CHECKING:
     from agentpool.sessions.models import ProjectData
     from agentpool_config.session import SessionQuery
     from agentpool_config.storage import BaseStorageProviderConfig
-    from agentpool_storage.models import ConversationData, QueryFilters, StatsFilters
+    from agentpool_storage.models import ConversationData, GroupBy, QueryFilters, StatsFilters
 
 
 class StoredMessage:
