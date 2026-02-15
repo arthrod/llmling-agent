@@ -10,7 +10,6 @@ from exxec_config import E2bExecutionEnvironmentConfig, ExecutionEnvironmentConf
 from pydantic import ConfigDict, Field, HttpUrl, ImportString
 from schemez import Schema
 
-from agentpool_config import StreamableHTTPMCPServerConfig
 from agentpool_config.event_handlers import EventHandlerConfig, StdoutEventHandlerConfig
 from agentpool_config.forward_targets import (
     FileConnectionConfig,
@@ -18,7 +17,12 @@ from agentpool_config.forward_targets import (
     NodeConnectionConfig,
 )
 from agentpool_config.hooks import HooksConfig
-from agentpool_config.mcp_server import BaseMCPServerConfig, MCPServerConfig, StdioMCPServerConfig
+from agentpool_config.mcp_server import (
+    BaseMCPServerConfig,
+    MCPServerConfig,
+    StdioMCPServerConfig,
+    StreamableHTTPMCPServerConfig,
+)
 
 
 if TYPE_CHECKING:
