@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, assert_never
 
 from pydantic import ConfigDict, Field
 
@@ -143,12 +143,15 @@ class CodexAgentConfig(BaseAgentConfig):
 
         for tool_config in self.tools:
             try:
-                if isinstance(tool_config, BaseToolsetConfig):
-                    providers.append(tool_config.get_provider())
-                elif isinstance(tool_config, str):
-                    static_tools.append(Tool.from_callable(tool_config))
-                elif isinstance(tool_config, BaseToolConfig):
-                    static_tools.append(tool_config.get_tool())
+                match tool_config:
+                    case BaseToolsetConfig():
+                        providers.append(tool_config.get_provider())
+                    case str():
+                        static_tools.append(Tool.from_callable(tool_config))
+                    case BaseToolConfig():
+                        static_tools.append(tool_config.get_tool())
+                    case _ as unreachable:
+                        assert_never(unreachable)
             except Exception:
                 logger.exception("Failed to load tool", config=tool_config)
                 continue

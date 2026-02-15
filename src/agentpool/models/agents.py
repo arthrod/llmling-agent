@@ -296,10 +296,8 @@ class NativeAgentConfig(BaseAgentConfig):
         """Resolve workers list, converting plain strings to AgentWorkerConfig."""
         resolved: list[WorkerConfig] = []
         for worker in self.workers:
-            if isinstance(worker, str):
-                resolved.append(AgentWorkerConfig(name=worker))
-            else:
-                resolved.append(worker)
+            cfg = AgentWorkerConfig(name=worker) if isinstance(worker, str) else worker
+            resolved.append(cfg)
         return resolved
 
     def get_tool_providers(self) -> list[ResourceProvider]:
