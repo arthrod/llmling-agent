@@ -104,12 +104,10 @@ class RemoteCodeExecutor:
         Returns:
             Execution result from the environment
         """
-        from fsspec.asyn import AsyncFileSystem
-        from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
+        from upathtools.async_ops import to_async_fs
 
         fs = internal_fs or self._fallback_fs
-        if not isinstance(fs, AsyncFileSystem):
-            fs = AsyncFileSystemWrapper(fs)
+        fs = to_async_fs(fs)
         start_time = datetime.now(UTC)
         exit_code = 0
         error_msg: str | None = None

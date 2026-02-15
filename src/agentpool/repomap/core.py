@@ -58,10 +58,9 @@ class RepoMap:
             max_line_length: Maximum character length for output lines.
             token_counter: Callable to count tokens. Defaults to len(text) / 4.
         """
-        from fsspec.asyn import AsyncFileSystem
-        from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
+        from upathtools.async_ops import to_async_fs
 
-        self.fs = fs if isinstance(fs, AsyncFileSystem) else AsyncFileSystemWrapper(fs)
+        self.fs = to_async_fs(fs)
         self.root_path = root_path.rstrip("/") if root_path else self.fs.root_marker
         self.max_tokens = max_tokens
         self.max_line_length = max_line_length

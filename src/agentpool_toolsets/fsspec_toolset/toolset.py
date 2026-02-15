@@ -117,21 +117,17 @@ class FSSpecTools(ResourceProvider):
                 are compressed using progressive quality/dimension reduction.
                 Default: 4.5MB (below Anthropic's 5MB limit).
         """
-        from fsspec.asyn import AsyncFileSystem
-        from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
+        from upathtools import to_async_fs
 
         if source is None:
             self._fs: AsyncFileSystem | None = None
             self.execution_env: ExecutionEnvironment | None = None
         elif isinstance(source, ExecutionEnvironment):
             self.execution_env = source
-            fs = source.get_fs()
-            self._fs = fs if isinstance(fs, AsyncFileSystem) else AsyncFileSystemWrapper(fs)
+            self._fs = source.get_fs()
         else:
             self.execution_env = None
-            self._fs = (
-                source if isinstance(source, AsyncFileSystem) else AsyncFileSystemWrapper(source)
-            )
+            self._fs = to_async_fs(source)
         super().__init__(name=name or f"file_access_{self._fs.protocol if self._fs else 'default'}")
         self.edit_model = edit_model
         self.cwd = cwd
@@ -150,18 +146,8 @@ class FSSpecTools(ResourceProvider):
         self._max_image_bytes = max_image_bytes
 
     def _get_fs(self, agent_ctx: AgentContext) -> AsyncFileSystem:
-        """Get filesystem, falling back to agent's env if not set.
-
-        Args:
-            agent_ctx: Agent context to get fallback env from
-        """
-        from fsspec.asyn import AsyncFileSystem
-        from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
-
-        if self._fs is not None:
-            return self._fs
-        fs = agent_ctx.agent.env.get_fs()
-        return fs if isinstance(fs, AsyncFileSystem) else AsyncFileSystemWrapper(fs)
+        """Get filesystem, falling back to agent's env if not set."""
+        return agent_ctx.agent.env.get_fs() if self._fs is None else self._fs
 
     def _get_diagnostics_manager(self, agent_ctx: AgentContext) -> DiagnosticsManager | None:
         """Get or create the diagnostics manager."""

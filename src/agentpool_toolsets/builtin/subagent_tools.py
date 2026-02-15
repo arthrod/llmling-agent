@@ -7,9 +7,9 @@ import datetime
 import re
 from typing import TYPE_CHECKING, Any, Literal
 
-from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
 from pydantic_ai import ModelRetry
 from pydantic_ai.messages import TextPartDelta, ThinkingPartDelta
+from upathtools.filesystems.base import WrapperFileSystem
 
 from agentpool.agents.context import AgentContext  # noqa: TC001
 from agentpool.agents.events import PartDeltaEvent, StreamCompleteEvent, SubAgentEvent
@@ -291,7 +291,7 @@ class SubagentTools(StaticResourceProvider):
             # Create the task directory
             fs = ctx.internal_fs
             fs.mkdirs(f"/tasks/{task_id}", exist_ok=True)
-            fs = AsyncFileSystemWrapper(fs)
+            fs = WrapperFileSystem(fs)
             # Start streaming to filesystem in background
             # Store task reference to prevent garbage collection
             task = asyncio.create_task(
