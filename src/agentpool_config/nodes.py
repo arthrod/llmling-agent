@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal, assert_never
 
 from evented_config import EventConfig, FileWatchConfig, TimeEventConfig
 from exxec_config import E2bExecutionEnvironmentConfig, ExecutionEnvironmentConfig
-from pydantic import ConfigDict, Field, ImportString
+from pydantic import ConfigDict, Field, HttpUrl, ImportString
 from schemez import Schema
 
 from agentpool_config import StreamableHTTPMCPServerConfig
@@ -114,7 +114,7 @@ class NodeConfig(Schema):
         title="MCP servers",
         examples=[
             ["uvx some-server"],
-            [StreamableHTTPMCPServerConfig(url="http://mcp.example.com")],
+            [StreamableHTTPMCPServerConfig(url=HttpUrl("http://mcp.example.com"))],
         ],
     )
     """List of MCP server configurations:
@@ -128,7 +128,7 @@ class NodeConfig(Schema):
     event_handlers: list[EventHandlerConfig] = Field(
         default_factory=list,
         title="Event handlers",
-        examples=[[StdoutEventHandlerConfig(handler="minimal")]],
+        examples=[[StdoutEventHandlerConfig(handler="simple")]],
     )
     """Event handlers for processing agent stream events.
 
