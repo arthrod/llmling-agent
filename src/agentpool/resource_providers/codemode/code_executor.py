@@ -209,7 +209,6 @@ class ToolServerLifecycleHandler:
             ws="websockets-sansio",
         )
         self.server = uvicorn.Server(config)
-
         # Start server in background with our socket
         self._server_task = asyncio.create_task(self.server.serve([self._socket]))
         logger.info("Started tool server", host=self.host, port=self.port)
@@ -232,10 +231,8 @@ class ToolServerLifecycleHandler:
         """Stop FastAPI server."""
         # Stop server gracefully
         if self.server:
-            with contextlib.suppress(Exception):
-                self.server.should_exit = True
-                if hasattr(self.server, "force_exit"):
-                    self.server.force_exit = True
+            self.server.should_exit = True
+            self.server.force_exit = True
 
         # Cancel server task
         if self._server_task and not self._server_task.done():
