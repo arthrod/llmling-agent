@@ -156,14 +156,14 @@ def parse_claude_format(
             config_kwargs["requires_tool_confirmation"] = mapped
         else:
             logger.warning(
-                "Unknown permissionMode %r in %s, using default",
-                permission_mode,
-                file_path,
+                "Unknown permissionMode, using default",
+                permission_mode=permission_mode,
+                file_path=file_path,
             )
 
     # Tools string format (comma-separated) - not yet supported
     if (tools := metadata.get("tools")) and isinstance(tools, str):
-        logger.debug("Claude Code tools string %r in %s (not yet supported)", tools, file_path)
+        logger.debug("Claude Code tools string not yet supported", tools=tools, file_path=file_path)
 
     # Skills handling
     if (skills_str := metadata.get("skills")) and skills_registry is not None:
@@ -171,9 +171,9 @@ def parse_claude_format(
         for skill_name in skill_names:
             if skill_name not in skills_registry:
                 logger.warning(
-                    "Skill %r from %s not found in registry, ignoring",
-                    skill_name,
-                    file_path,
+                    "Skill not found in registry, ignoring",
+                    skill_name=skill_name,
+                    file_path=file_path,
                 )
 
     # System prompt from markdown body
@@ -221,20 +221,26 @@ def parse_opencode_format(
     # Temperature (logged, not directly supported)
     if temperature := metadata.get("temperature"):
         logger.debug(
-            "OpenCode temperature %r in %s (not directly supported)", temperature, file_path
+            "OpenCode temperature not directly supported",
+            temperature=temperature,
+            file_path=file_path,
         )
 
     # MaxSteps (logged, not directly supported)
     if max_steps := metadata.get("maxSteps"):
-        logger.debug("OpenCode maxSteps %r in %s (not directly supported)", max_steps, file_path)
+        logger.debug(
+            "OpenCode maxSteps not directly supported", max_steps=max_steps, file_path=file_path
+        )
 
     # Disable (logged, not directly supported)
     if disable := metadata.get("disable"):
-        logger.debug("OpenCode disable %r in %s (not directly supported)", disable, file_path)
+        logger.debug(
+            "OpenCode disable not directly supported", disable=disable, file_path=file_path
+        )
 
     # Mode (informational only)
     if mode := metadata.get("mode"):
-        logger.debug("OpenCode mode %r in %s (informational only)", mode, file_path)
+        logger.debug("OpenCode mode informational only", mode=mode, file_path=file_path)
 
     # Permission handling (granular per-tool)
     if permission := metadata.get("permission"):
@@ -243,11 +249,13 @@ def parse_opencode_format(
             config_kwargs["requires_tool_confirmation"] = (
                 "always" if edit_perm == "ask" else "never"
             )
-        logger.debug("OpenCode permission %r in %s (partial mapping)", permission, file_path)
+        logger.debug(
+            "OpenCode permission partial mapping", permission=permission, file_path=file_path
+        )
 
     # Tools dict format (not yet supported)
     if (tools := metadata.get("tools")) and isinstance(tools, dict):
-        logger.debug("OpenCode tools dict %r in %s (not yet supported)", tools, file_path)
+        logger.debug("OpenCode tools dict not yet supported", tools=tools, file_path=file_path)
 
     # System prompt from markdown body
     if system_prompt:
