@@ -7,6 +7,7 @@ import datetime
 import re
 from typing import TYPE_CHECKING, Any, Literal
 
+from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
 from pydantic_ai import ModelRetry
 from pydantic_ai.messages import TextPartDelta, ThinkingPartDelta
 
@@ -21,7 +22,7 @@ from agentpool.tools.exceptions import ToolError
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from fsspec.implementations.memory import MemoryFileSystem
+    from fsspec.asyn import AsyncFileSystem
 
     from agentpool.agents.events import RichAgentStreamEvent
 
@@ -102,7 +103,7 @@ async def _stream_task(
 
 
 async def _stream_task_to_fs(
-    fs: MemoryFileSystem,
+    fs: AsyncFileSystem,
     task_id: str,
     source_name: str,
     stream: AsyncIterator[RichAgentStreamEvent[Any]],
@@ -133,9 +134,9 @@ async def _stream_task_to_fs(
                 ) if text:
                     content_parts.append(text)
                     # Write incrementally (overwrite with accumulated content)
-                    fs.pipe(output_path, "".join(content_parts).encode("utf-8"))
+                    await fs._pipe(output_path, "".join(content_parts).encode("utf-8"))
                 case StreamCompleteEvent(message=msg) if msg.content:
-                    fs.pipe(output_path, str(msg.content).encode("utf-8"))
+                    await fs._pipe(output_path, str(msg.content).encode("utf-8"))
 
         logger.info(
             "Async task completed",
@@ -290,7 +291,7 @@ class SubagentTools(StaticResourceProvider):
             # Create the task directory
             fs = ctx.internal_fs
             fs.mkdirs(f"/tasks/{task_id}", exist_ok=True)
-
+            fs = AsyncFileSystemWrapper(fs)
             # Start streaming to filesystem in background
             # Store task reference to prevent garbage collection
             task = asyncio.create_task(
