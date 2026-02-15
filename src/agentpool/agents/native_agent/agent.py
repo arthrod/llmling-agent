@@ -6,7 +6,6 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import timedelta
-import inspect
 from pathlib import Path
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Self, TypedDict, TypeVar, overload
@@ -151,6 +150,7 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
         usage_limits: UsageLimits | None = None,
         providers: Sequence[ProviderType] | None = None,
         commands: Sequence[BaseCommand] | None = None,
+        history_processors: Sequence[Callable[..., Any]] | None = None,
     ) -> None:
         """Initialize agent.
 
@@ -198,6 +198,7 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
             providers: Model providers for model discovery (e.g., ["openai", "anthropic"]).
                 Defaults to ["models.dev"] if not specified.
             commands: Slash commands
+            history_processors: Pre-resolved history processor callables
         """
         from agentpool.agents.interactions import Interactions
         from agentpool.agents.native_agent.hook_manager import NativeAgentHookManager
@@ -284,76 +285,7 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
         )
         self._default_usage_limits = usage_limits
         self._providers = list(providers) if providers else None  # model discovery
-        self._resolved_history_processors: list[Callable[..., Any]] | None = None
-
-    def _validate_processor_signature(self, processor: Callable[..., Any]) -> None:
-        """Validate that a history processor has been correct signature.
-
-        Valid signatures:
-        - sync: (messages) -> msgs
-        - sync with ctx: (ctx, messages) -> msgs
-        - async: async (messages) -> msgs
-        - async with ctx: async (ctx, messages) -> msgs
-
-        Args:
-            processor: The processor to validate
-
-        Raises:
-            ValueError: If signature is not valid
-        """
-        # Define constant for parameter validation
-        two_params = 2
-
-        sig = inspect.signature(processor)
-        params = list(sig.parameters.values())
-
-        # Check parameter count
-        if len(params) not in (1, two_params):
-            msg = f"History processor must take 1 or {two_params} arguments, got {len(params)}"
-            raise ValueError(msg)
-
-        # Second parameter (if present) must be named 'messages' or similar
-        if len(params) == two_params:
-            last_param_name = params[1].name.lower()
-            if last_param_name not in ("messages", "msgs", "history"):
-                msg = (
-                    f"Second parameter of history processor must be "
-                    f"messages/msgs/history, got {params[1].name}"
-                )
-                raise ValueError(msg)
-
-    def _resolve_history_processors(self) -> list[Callable[..., Any]]:
-        """Resolve history processors from config with caching.
-
-        Returns:
-            List of resolved processor callables
-        """
-        # Return cached result if available
-        if self._resolved_history_processors is not None:
-            return self._resolved_history_processors
-
-        # Get history processors from memory config
-        processor_paths = getattr(self.conversation._config, "history_processors", None)
-        if not processor_paths:
-            self._resolved_history_processors = []
-            return []
-
-        from agentpool.utils.importing import import_callable
-
-        resolved: list[Callable[..., Any]] = []
-        for path in processor_paths:
-            try:
-                processor = import_callable(path)
-                # Validate signature
-                self._validate_processor_signature(processor)
-                resolved.append(processor)
-            except Exception as e:
-                msg = f"Failed to resolve history processor '{path}': {e}"
-                raise ValueError(msg) from e
-
-        # Cache resolved processors
-        self._resolved_history_processors = resolved
-        return resolved
+        self._history_processors = list(history_processors) if history_processors else []
 
     @classmethod
     def from_config(
@@ -469,6 +401,7 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
             builtin_tools=config.get_builtin_tools() or None,
             usage_limits=config.usage_limits,
             providers=config.model_providers,
+            history_processors=config.get_history_processors() or None,
         )
 
     async def __aenter__(self) -> Self:
@@ -667,9 +600,6 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
         else:
             model_ = actual_model
 
-        # Resolve history processors with caching
-        history_processors = self._resolve_history_processors()
-
         agent = PydanticAgent(
             name=self.name,
             model=model_,
@@ -681,7 +611,7 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
             deps_type=self.deps_type or NoneType,
             output_type=final_type,
             builtin_tools=self._builtin_tools,
-            history_processors=history_processors,
+            history_processors=self._history_processors or None,
         )
 
         context_for_tools = self.get_context(input_provider=input_provider)
@@ -765,7 +695,7 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
                     if isinstance(node, ModelRequestNode | CallToolsNode):
                         async with (
                             node.stream(agent_run.ctx) as stream,
-                            merge_queue_into_iterator(stream, self._event_queue) as merged,  # ty: ignore[invalid-argument-type]
+                            merge_queue_into_iterator(stream, self._event_queue) as merged,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
                         ):
                             async for event in file_tracker(merged):  # ty: ignore[invalid-argument-type]
                                 if self._cancelled:

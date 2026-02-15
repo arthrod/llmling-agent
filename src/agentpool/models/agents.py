@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence  # noqa: TC003
+from collections.abc import Callable, Sequence  # noqa: TC003
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal, assert_never
 from uuid import UUID
@@ -44,6 +44,39 @@ logger = log.get_logger(__name__)
 
 # Unified type for all tool configurations (single tools + toolsets)
 AnyToolConfig = Annotated[NativeAgentToolConfig | ToolsetConfig, Field(discriminator="type")]
+
+_MAX_PROCESSOR_PARAMS = 2
+
+
+def _validate_processor_signature(processor: Callable[..., Any]) -> None:
+    """Validate that a history processor has a correct signature.
+
+    Valid signatures:
+    - sync: (messages) -> msgs
+    - sync with ctx: (ctx, messages) -> msgs
+    - async: async (messages) -> msgs
+    - async with ctx: async (ctx, messages) -> msgs
+
+    Raises:
+        ValueError: If signature is not valid.
+    """
+    import inspect
+
+    sig = inspect.signature(processor)
+    params = list(sig.parameters.values())
+    if len(params) not in (1, _MAX_PROCESSOR_PARAMS):
+        msg = (
+            f"History processor must take 1 or {_MAX_PROCESSOR_PARAMS} arguments, got {len(params)}"
+        )
+        raise ValueError(msg)
+    if len(params) == _MAX_PROCESSOR_PARAMS:
+        last_param_name = params[1].name.lower()
+        if last_param_name not in ("messages", "msgs", "history"):
+            msg = (
+                f"Second parameter of history processor must be "
+                f"messages/msgs/history, got {params[1].name}"
+            )
+            raise ValueError(msg)
 
 
 class NativeAgentConfig(BaseAgentConfig):
@@ -348,6 +381,32 @@ class NativeAgentConfig(BaseAgentConfig):
                 return MemoryConfig()
             case _ as unreachable:
                 assert_never(unreachable)
+
+    def get_history_processors(self) -> list[Callable[..., Any]]:
+        """Resolve history processor import paths to callables.
+
+        Returns:
+            List of resolved and validated processor callables.
+
+        Raises:
+            ValueError: If a processor cannot be imported or has invalid signature.
+        """
+        from agentpool.utils.importing import import_callable
+
+        session_config = self.get_session_config()
+        processor_paths = session_config.history_processors
+        if not processor_paths:
+            return []
+        resolved: list[Callable[..., Any]] = []
+        for path in processor_paths:
+            try:
+                processor = import_callable(path)
+                _validate_processor_signature(processor)
+                resolved.append(processor)
+            except Exception as e:
+                msg = f"Failed to resolve history processor '{path}': {e}"
+                raise ValueError(msg) from e
+        return resolved
 
     def get_system_prompts(self) -> list[BasePrompt]:
         """Get all system prompts as BasePrompts."""
