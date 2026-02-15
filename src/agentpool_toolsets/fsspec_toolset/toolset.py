@@ -1711,13 +1711,13 @@ DO NOT use any tools. Just output the diff directly."""
 if __name__ == "__main__":
 
     async def main() -> None:
-        import fsspec
         from pydantic_ai import RunContext as PyAiContext, RunUsage
         from pydantic_ai.models.test import TestModel
+        from upathtools import core
 
         from agentpool import Agent, AgentPool
 
-        fs = fsspec.filesystem("file")
+        fs = core.filesystem("file")
         tools = FSSpecTools(fs, name="local_fs")
         async with AgentPool() as pool:
             agent = Agent(name="test", model="anthropic-max:claude-haiku-4-5")

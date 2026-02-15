@@ -6332,7 +6332,7 @@ wheels = [
 
 [[package]]
 name = "upathtools"
-version = "1.19.2"
+version = "1.19.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofile" },
@@ -6341,9 +6341,9 @@ dependencies = [
     { name = "ripgrep-rs" },
     { name = "universal-pathlib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/88/70/a290821f42af447b39c8b07006e5b73fc34885bad520abd78c6df23e733d/upathtools-1.19.2.tar.gz", hash = "sha256:3acfad8c4848cb3d157c8c30b5c6d2833e7a653661a3a146657f3e0cd40ff4e1", size = 184678, upload-time = "2026-02-12T17:35:17.464Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6c/0e/48693e31576830ff6795f18025de6e62ecc9a42cff1cee4ec8569c1c95f6/upathtools-1.19.3.tar.gz", hash = "sha256:0628867014b7e0b403386ce4190f7a625e4f88754ba9a5cf2b8c3371e581dc1e", size = 184599, upload-time = "2026-02-15T09:52:12.234Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c1/a2/a0cc96c60a93e21f3b1abcb5ee63da0fe91a7aceaf2dcd4bf3521bcd3774/upathtools-1.19.2-py3-none-any.whl", hash = "sha256:2cab4dfd8e96ec92c7178acc02135af9c0fde373a254243592e40f08d3b131e5", size = 243924, upload-time = "2026-02-12T17:35:16.096Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/e6/14cc9bc840b7a38a2ebacc1bc12bc27ac7982f74e01bb4b3670cc9596f20/upathtools-1.19.3-py3-none-any.whl", hash = "sha256:cb21c16501c84218edc188530c233c767b4e7fe5ed7e0a70bca6090875575a8f", size = 244169, upload-time = "2026-02-15T09:52:10.436Z" },
 ]
 
 [package.optional-dependencies]
