@@ -23,7 +23,7 @@ from upathtools_config.base import FileSystemConfig
 
 from agentpool_config.converters import ConversionConfig
 from agentpool_config.tools import ImportToolConfig
-from agentpool_config.workers import WorkerConfig
+from agentpool_config.workers import AgentWorkerConfig, WorkerConfig
 
 
 if TYPE_CHECKING:
@@ -227,14 +227,24 @@ class WorkersToolsetConfig(BaseToolsetConfig):
     type: Literal["workers"] = Field("workers", init=False)
     """Workers toolset (predefined agent/team tools)."""
 
-    workers: list[WorkerConfig] = Field(default_factory=list, title="Worker configurations")
-    """List of workers to register as tools."""
+    workers: list[WorkerConfig | str] = Field(default_factory=list, title="Worker configurations")
+    """List of workers to register as tools. Can be config objects or plain agent names."""
+
+    def get_workers(self) -> list[WorkerConfig]:
+        """Resolve workers list, converting plain strings to AgentWorkerConfig."""
+        resolved: list[WorkerConfig] = []
+        for worker in self.workers:
+            if isinstance(worker, str):
+                resolved.append(AgentWorkerConfig(name=worker))
+            else:
+                resolved.append(worker)
+        return resolved
 
     def get_provider(self) -> ResourceProvider:
         """Create workers tools provider."""
         from agentpool_toolsets.builtin.workers import WorkersTools
 
-        return WorkersTools(workers=self.workers, name="workers")
+        return WorkersTools(workers=self.get_workers(), name="workers")
 
 
 class ProcessManagementToolsetConfig(BaseToolsetConfig):

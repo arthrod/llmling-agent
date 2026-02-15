@@ -434,10 +434,9 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
         toolsets_list = config.get_toolsets()
         if config_tool_provider := config.get_tool_provider():
             toolsets_list.append(config_tool_provider)
-        # Convert workers config to a toolset (backwards compatibility)
-        if config.workers:
-            workers_provider = WorkersTools(workers=list(config.workers), name="workers")
-            toolsets_list.append(workers_provider)
+        # Convert workers config to a toolset
+        if workers := config.get_workers():
+            toolsets_list.append(WorkersTools(workers=workers, name="workers"))
         # Resolve output type from config
         resolved_output_type = to_type(t, manifest.responses) if (t := config.output_type) else str
         # Merge event handlers

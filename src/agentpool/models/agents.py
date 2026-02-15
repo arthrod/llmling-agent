@@ -26,7 +26,7 @@ from agentpool_config.knowledge import Knowledge  # noqa: TC001
 from agentpool_config.nodes import BaseAgentConfig
 from agentpool_config.session import MemoryConfig, SessionQuery
 from agentpool_config.toolsets import BaseToolsetConfig, ToolsetConfig
-from agentpool_config.workers import WorkerConfig  # noqa: TC001
+from agentpool_config.workers import AgentWorkerConfig, WorkerConfig  # noqa: TC001
 
 
 if TYPE_CHECKING:
@@ -164,11 +164,12 @@ class NativeAgentConfig(BaseAgentConfig):
     Docs: https://phil65.github.io/agentpool/YAML%20Configuration/knowledge_configuration/
     """
 
-    workers: list[WorkerConfig] = Field(
+    workers: list[WorkerConfig | str] = Field(
         default_factory=list,
         examples=[
             [{"type": "agent", "name": "web_agent", "reset_history_on_run": True}],
             [{"type": "team", "name": "analysis_team"}],
+            ["web_agent", "code_analyzer"],
         ],
         title="Worker agents",
         json_schema_extra={
@@ -176,6 +177,8 @@ class NativeAgentConfig(BaseAgentConfig):
         },
     )
     """Worker agents which will be available as tools.
+
+    Can be worker config objects or plain strings (agent names, resolved as AgentWorkerConfig).
 
     Docs: https://phil65.github.io/agentpool/YAML%20Configuration/worker_configuration/
     """
@@ -255,6 +258,16 @@ class NativeAgentConfig(BaseAgentConfig):
             agent_pool=pool,
             deps_type=deps_type,
         )
+
+    def get_workers(self) -> list[WorkerConfig]:
+        """Resolve workers list, converting plain strings to AgentWorkerConfig."""
+        resolved: list[WorkerConfig] = []
+        for worker in self.workers:
+            if isinstance(worker, str):
+                resolved.append(AgentWorkerConfig(name=worker))
+            else:
+                resolved.append(worker)
+        return resolved
 
     def get_tool_providers(self) -> list[ResourceProvider]:
         """Get all resource providers for this agent's tools.
