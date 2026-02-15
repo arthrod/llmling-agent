@@ -115,13 +115,9 @@ class RemoteCodeExecutor:
             exec_result = await self.execution_env.execute(code)
             result_str = str(exec_result)
             # Check if execution failed
-            if (
-                hasattr(exec_result, "exit_code")
-                and exec_result.exit_code is not None
-                and exec_result.exit_code != 0
-            ):
+            if exec_result.exit_code is not None and exec_result.exit_code != 0:
                 exit_code = exec_result.exit_code
-                error_msg = getattr(exec_result, "error", None)
+                error_msg = exec_result.error
         except Exception as e:  # noqa: BLE001
             exit_code = 1
             error_msg = str(e)
@@ -186,6 +182,7 @@ class ToolServerLifecycleHandler:
         """Start FastAPI server with tool routes."""
         from exxec.models import ServerInfo
         from fastapi import FastAPI
+        import uvicorn
 
         from agentpool.utils.network import _create_socket
 
@@ -195,12 +192,8 @@ class ToolServerLifecycleHandler:
         self._socket, self.port = _create_socket(self.port)
         # Create FastAPI app
         self.app = FastAPI(title="Tool Server", description="Generated tool endpoints")
-
         # Add tool routes
         self.toolset_generator.add_all_routes(self.app, "/tools")
-
-        import uvicorn
-
         config = uvicorn.Config(
             self.app,
             log_level="error",  # Reduce log noise
