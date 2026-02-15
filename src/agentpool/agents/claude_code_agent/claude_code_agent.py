@@ -915,7 +915,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             # Merge SDK messages with event queue for real-time tool event streaming
             async with (
                 self._tool_bridge.set_run_context(deps, input_provider, prompt=prompts),
-                merge_queue_into_iterator(stream, self._event_queue) as events,
+                merge_queue_into_iterator(stream, self._event_queue) as events,  # ty: ignore[invalid-argument-type]
             ):
                 async for event_or_message in events:
                     # Check if it's a queued event (from tools via EventEmitter)

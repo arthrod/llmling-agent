@@ -765,9 +765,9 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
                     if isinstance(node, ModelRequestNode | CallToolsNode):
                         async with (
                             node.stream(agent_run.ctx) as stream,
-                            merge_queue_into_iterator(stream, self._event_queue) as merged,  # type: ignore[arg-type]
+                            merge_queue_into_iterator(stream, self._event_queue) as merged,  # ty: ignore[invalid-argument-type]
                         ):
-                            async for event in file_tracker(merged):
+                            async for event in file_tracker(merged):  # ty: ignore[invalid-argument-type]
                                 if self._cancelled:
                                     break
                                 yield event

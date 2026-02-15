@@ -469,9 +469,9 @@ class ACPAgent[TDeps = None](BaseAgent[TDeps, str]):
         try:
             async with (
                 self._tool_bridge.set_run_context(deps, input_provider, prompt=prompts),
-                merge_queue_into_iterator(poll_acp_events(), self._event_queue) as merged_events,
+                merge_queue_into_iterator(poll_acp_events(), self._event_queue) as merged_events,  # ty: ignore[invalid-argument-type]
             ):
-                async for event in file_tracker(merged_events):
+                async for event in file_tracker(merged_events):  # ty: ignore[invalid-argument-type]
                     if isinstance(event, ToolResultMetadataEvent):
                         tool_metadata[event.tool_call_id] = event.metadata
                         continue
