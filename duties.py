@@ -241,6 +241,52 @@ def version(
 
 
 @duty(capture=False)
+def smoke_test(ctx, timeout: int = 10):
+    """Build wheel and verify serve-acp starts successfully via uvx.
+
+    Builds the package, installs it in an isolated uvx environment,
+    and checks that serve-acp stays alive for the given timeout.
+    Exit code 124 from timeout means the process was still running (success).
+    Any other exit code means it crashed (failure).
+
+    Args:
+        timeout: Seconds to wait before considering the server healthy.
+    """
+    import subprocess
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Build wheel
+        ctx.run(f"uv build --wheel --out-dir {tmpdir}")
+
+        # Find the built wheel
+        wheels = list(Path(tmpdir).glob("*.whl"))
+        if not wheels:
+            msg = "No wheel found after build"
+            raise RuntimeError(msg)
+        wheel = wheels[0]
+        print(f"Built: {wheel.name}")
+
+        # Run serve-acp from the wheel in an isolated environment
+        result = subprocess.run(
+            ["timeout", str(timeout), "uvx", "--from", str(wheel), "agentpool", "serve-acp"],
+            capture_output=True,
+            text=True,
+        )
+
+        if result.returncode == 124:
+            print(f"serve-acp stayed alive for {timeout}s (healthy)")
+        else:
+            print(f"serve-acp exited with code {result.returncode}")
+            if result.stdout:
+                print(f"stdout: {result.stdout}")
+            if result.stderr:
+                print(f"stderr: {result.stderr}")
+            msg = f"serve-acp crashed (exit code {result.returncode})"
+            raise RuntimeError(msg)
+
+
+@duty(capture=False)
 def schema_html(ctx):
     """Create HTML documentation for JSON schema."""
     ctx.run(
