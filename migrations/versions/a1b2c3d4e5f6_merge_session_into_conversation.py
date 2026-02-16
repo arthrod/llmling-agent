@@ -108,9 +108,11 @@ def upgrade() -> None:
         op.execute(
             sa.text("""
                 INSERT INTO conversation (id, agent_name, pool_id, project_id, parent_id,
-                                         version, cwd, start_time, last_active, metadata_json)
+                                         version, cwd, start_time, last_active, metadata_json,
+                                         total_tokens, total_cost)
                 SELECT s.session_id, s.agent_name, s.pool_id, s.project_id, s.parent_id,
-                       s.version, s.cwd, s.created_at, s.last_active, s.metadata_json
+                       s.version, s.cwd, s.created_at, s.last_active, s.metadata_json,
+                       0, 0.0
                 FROM session s
                 WHERE s.session_id NOT IN (SELECT id FROM conversation)
             """)
