@@ -17,8 +17,6 @@ import pytest
 
 from acp.client.implementations import NoOpClient
 from acp.schema import InitializeRequest
-from acp.schema.capabilities import ClientCapabilities, FileSystemCapability
-from acp.schema.common import Implementation
 from acp.stdio import spawn_agent_process
 from agentpool.models.acp_agents.mcp_capable import MCPCapableACPAgentConfigTypes
 from agentpool.models.acp_agents.non_mcp import RegularACPAgentConfigTypes
@@ -77,67 +75,64 @@ async def get_agent_capabilities(agent_class: type[BaseACPAgentConfig]) -> dict[
     env.setdefault("ANTHROPIC_API_KEY", "sk-ant-dummy-test")
     env.setdefault("OPENAI_API_KEY", "sk-dummy-test")
     try:
-        async with asyncio.timeout(30):
-            async with spawn_agent_process(
+        async with (
+            asyncio.timeout(30),
+            spawn_agent_process(
                 lambda _: NoOpClient(),
                 command,
                 *args,
                 env=env,
                 log_stderr=True,
-            ) as (conn, _process):
-                init_request = InitializeRequest(
-                    protocol_version=1,
-                    client_info=Implementation(
-                        title="Capability Probe",
-                        name="agentpool-capability-test",
-                        version="0.1.0",
-                    ),
-                    client_capabilities=ClientCapabilities(
-                        terminal=True,
-                        fs=FileSystemCapability(read_text_file=True, write_text_file=True),
-                    ),
-                )
+            ) as (conn, _process),
+        ):
+            init_request = InitializeRequest.create(
+                title="Capability Probe",
+                name="agentpool-capability-test",
+                version="0.1.0",
+                terminal=True,
+                read_text_file=True,
+                write_text_file=True,
+            )
+            response = await conn.initialize(init_request)
 
-                response = await conn.initialize(init_request)
+            result["status"] = "ok"
+            result["protocol_version"] = response.protocol_version
 
-                result["status"] = "ok"
-                result["protocol_version"] = response.protocol_version
+            if response.agent_info:
+                result["agent_info"] = {
+                    "name": response.agent_info.name,
+                    "title": response.agent_info.title,
+                    "version": response.agent_info.version,
+                }
 
-                if response.agent_info:
-                    result["agent_info"] = {
-                        "name": response.agent_info.name,
-                        "title": response.agent_info.title,
-                        "version": response.agent_info.version,
+            if response.agent_capabilities:
+                caps = response.agent_capabilities
+                caps_dct: dict[str, Any] = {"load_session": caps.load_session}
+                result["capabilities"] = caps_dct
+                if caps.mcp_capabilities:
+                    result["capabilities"]["mcp"] = {
+                        "stdio": True,  # Always true per spec
+                        "http": caps.mcp_capabilities.http,
+                        "sse": caps.mcp_capabilities.sse,
+                    }
+                if caps.prompt_capabilities:
+                    result["capabilities"]["prompt"] = {
+                        "audio": caps.prompt_capabilities.audio,
+                        "image": caps.prompt_capabilities.image,
+                        "embedded_context": caps.prompt_capabilities.embedded_context,
+                    }
+                if caps.session_capabilities:
+                    session_caps = caps.session_capabilities
+                    result["capabilities"]["session"] = {
+                        "fork": session_caps.fork is not None,
+                        "list": session_caps.list is not None,
+                        "resume": session_caps.resume is not None,
                     }
 
-                if response.agent_capabilities:
-                    caps = response.agent_capabilities
-                    caps_dct: dict[str, Any] = {"load_session": caps.load_session}
-                    result["capabilities"] = caps_dct
-                    if caps.mcp_capabilities:
-                        result["capabilities"]["mcp"] = {
-                            "stdio": True,  # Always true per spec
-                            "http": caps.mcp_capabilities.http,
-                            "sse": caps.mcp_capabilities.sse,
-                        }
-                    if caps.prompt_capabilities:
-                        result["capabilities"]["prompt"] = {
-                            "audio": caps.prompt_capabilities.audio,
-                            "image": caps.prompt_capabilities.image,
-                            "embedded_context": caps.prompt_capabilities.embedded_context,
-                        }
-                    if caps.session_capabilities:
-                        session_caps = caps.session_capabilities
-                        result["capabilities"]["session"] = {
-                            "fork": session_caps.fork is not None,
-                            "list": session_caps.list is not None,
-                            "resume": session_caps.resume is not None,
-                        }
-
-                if response.auth_methods:
-                    result["auth_methods"] = [
-                        {"id": m.id, "name": m.name} for m in response.auth_methods
-                    ]
+            if response.auth_methods:
+                result["auth_methods"] = [
+                    {"id": m.id, "name": m.name} for m in response.auth_methods
+                ]
 
     except FileNotFoundError:
         result["status"] = "not_installed"
