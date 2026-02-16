@@ -136,11 +136,7 @@ class RepoMap:
         await _recurse(path)
         return results
 
-    async def get_file_map(
-        self,
-        fname: str,
-        max_tokens: int = 2048,
-    ) -> str | None:
+    async def get_file_map(self, fname: str, max_tokens: int = 2048) -> str | None:
         """Generate a structure map for a single file.
 
         Unlike get_map which uses PageRank across multiple files, this method
@@ -154,18 +150,14 @@ class RepoMap:
             Formatted structure map or None if no tags found
         """
         rel_fname = get_rel_path(fname, self.root_path)
-
         # Get all definition tags for this file
         tags = await self._get_tags(fname, rel_fname)
         def_tags = [t for t in tags if t.kind == "def"]
-
         if not def_tags:
             return None
-
         # Build line ranges for rendering
         lois: list[int] = []
         line_ranges: dict[int, int] = {}
-
         for tag in def_tags:
             if tag.signature_end_line >= tag.line:
                 lois.extend(range(tag.line, tag.signature_end_line + 1))
@@ -182,14 +174,11 @@ class RepoMap:
         size_info = f", {info.size} bytes" if info else ""
         lines = (await self._cat_file(fname) or "").count("\n") + 1
         tokens = self.token_count(tree_output)
-
         header = (
             f"# File: {rel_fname} ({lines} lines{size_info})\n"
             f"# Structure map ({tokens} tokens). Use offset/limit to read sections.\n\n"
         )
-
         result = header + f"{rel_fname}:\n" + tree_output
-
         # Truncate if needed
         max_chars = max_tokens * 4
         if len(result) > max_chars:
