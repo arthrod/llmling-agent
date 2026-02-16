@@ -595,32 +595,32 @@ class RepoMap:
         code = await self._cat_file(abs_fname) or ""
         code_lines = code.splitlines()
         lois_set = set(lois)
-
         def_pattern = re.compile(r"^(.*?)(class\s+\w+|def\s+\w+|async\s+def\s+\w+)")
-
         result_lines = []
         for output_line in res.splitlines():
             modified_line = output_line
             match = def_pattern.search(output_line)
-            if match:
-                stripped = output_line.lstrip("│ \t")
-                for line_num in lois_set:
-                    if line_num < len(code_lines):
-                        orig_line = code_lines[line_num].strip()
-                        if orig_line and stripped.startswith(orig_line.split("(")[0].split(":")[0]):
-                            name_match = re.search(
-                                r"(class\s+\w+|def\s+\w+|async\s+def\s+\w+)", output_line
-                            )
-                            if name_match:
-                                start_line_display = line_num + 1
-                                end_line = line_ranges.get(line_num, -1)
-                                if end_line >= 0 and end_line != line_num:
-                                    end_line_display = end_line + 1
-                                    line_info = f"  # [{start_line_display}-{end_line_display}]"
-                                else:
-                                    line_info = f"  # [{start_line_display}]"
-                                modified_line = f"{output_line}{line_info}"
-                            break
+            if not match:
+                continue
+            stripped = output_line.lstrip("│ \t")
+            for line_num in lois_set:
+                if line_num <= len(code_lines):
+                    continue
+                orig_line = code_lines[line_num].strip()
+                if orig_line and stripped.startswith(orig_line.split("(")[0].split(":")[0]):
+                    name_match = re.search(
+                        r"(class\s+\w+|def\s+\w+|async\s+def\s+\w+)", output_line
+                    )
+                    if name_match:
+                        start_line_display = line_num + 1
+                        end_line = line_ranges.get(line_num, -1)
+                        if end_line >= 0 and end_line != line_num:
+                            end_line_display = end_line + 1
+                            line_info = f"  # [{start_line_display}-{end_line_display}]"
+                        else:
+                            line_info = f"  # [{start_line_display}]"
+                        modified_line = f"{output_line}{line_info}"
+                    break
             result_lines.append(modified_line)
 
         res = "\n".join(result_lines)
