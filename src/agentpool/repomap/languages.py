@@ -18,7 +18,7 @@ def get_scm_fname(lang: str) -> Path | None:
     from importlib import resources
 
     fname = f"{lang}-tags.scm"
-    ref = resources.files("agentpool") / "queries" / "tree-sitter-language-pack" / fname
+    ref = resources.files("agentpool") / "repomap" / "queries" / "tree-sitter-language-pack" / fname
 
     # Try to get the path
     if isinstance(ref, os.PathLike):
