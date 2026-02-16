@@ -61,7 +61,7 @@ def _project_data_to_response(data: ProjectData) -> Project:
 
 async def _get_current_project(state: StateDep) -> ProjectData:
     """Get or create the current project from storage."""
-    storage = state.pool.storage
+    storage = state.storage
     project_store = ProjectStore(storage)
     return await project_store.get_or_create(state.working_dir)
 
@@ -69,7 +69,7 @@ async def _get_current_project(state: StateDep) -> ProjectData:
 @router.get("/project")
 async def list_projects(state: StateDep) -> list[Project]:
     """List all projects."""
-    storage = state.pool.storage
+    storage = state.storage
     project_store = ProjectStore(storage)
     projects = await project_store.list_recent(limit=50)
     return [_project_data_to_response(p) for p in projects]
@@ -99,7 +99,7 @@ async def update_project(project_id: str, update: ProjectUpdateRequest, state: S
     Raises:
         HTTPException: If project not found
     """
-    store = ProjectStore(state.pool.storage)
+    store = ProjectStore(state.storage)
     project_data = None
     # Update name if provided
     if update.name is not None:

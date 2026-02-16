@@ -140,7 +140,7 @@ async def create_session(state: StateDep, request: SessionCreateRequest | None =
     # Persist to storage
     id_ = state.pool.manifest.config_file_path
     session_data = opencode_to_session_data(session, agent_name=state.agent.name, pool_id=id_)
-    await state.pool.storage.save_session(session_data)
+    await state.storage.save_session(session_data)
     # Cache in memory
     state.sessions[session_id] = session
     state.messages[session_id] = []
@@ -193,7 +193,7 @@ async def update_session(
     state.sessions[session_id] = session  # Update cache
     id_ = state.pool.manifest.config_file_path
     session_data = opencode_to_session_data(session, agent_name=state.agent.name, pool_id=id_)
-    await state.pool.storage.save_session(session_data)
+    await state.storage.save_session(session_data)
     await state.broadcast_event(SessionUpdatedEvent.create(session))
     return session
 
@@ -216,7 +216,7 @@ async def delete_session(session_id: str, state: StateDep) -> bool:
     state.session_status.pop(session_id, None)
     state.todos.pop(session_id, None)
     # Delete from storage
-    await state.pool.storage.delete_session(session_id)
+    await state.storage.delete_session(session_id)
     await state.broadcast_event(SessionDeletedEvent.create(session_id))
     return True
 
@@ -309,7 +309,7 @@ async def fork_session(  # noqa: D417
         agent_name=state.agent.name,
         pool_id=state.pool.manifest.config_file_path,
     )
-    await state.pool.storage.save_session(session_data)
+    await state.storage.save_session(session_data)
     # Cache in memory
     state.sessions[new_session_id] = forked_session
     state.session_status[new_session_id] = SessionStatus(type="idle")
@@ -786,9 +786,9 @@ async def summarize_session(  # noqa: PLR0915
         await compact_conversation(pipeline, state.agent.conversation)
 
         # Persist compacted messages to storage, replacing the old ones
-        if state.pool.storage is not None:
+        if state.storage is not None:
             compacted_history = state.agent.conversation.get_history()
-            await state.pool.storage.replace_conversation_messages(
+            await state.storage.replace_conversation_messages(
                 session_id,
                 compacted_history,
             )

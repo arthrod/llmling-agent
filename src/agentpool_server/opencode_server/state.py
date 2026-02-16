@@ -10,6 +10,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from agentpool.diagnostics.lsp_manager import LSPManager
+from agentpool.storage import StorageManager
 
 
 if TYPE_CHECKING:
@@ -98,6 +99,12 @@ class ServerState:
     def fs(self) -> AsyncFileSystem:
         """Get the fsspec filesystem from the agent's environment."""
         return self.agent.env.get_fs()
+
+    @property
+    def storage(self) -> StorageManager:
+        """Get the fsspec filesystem from the agent's environment."""
+        assert self.agent.storage is not None, "Agent storage is not initialized"
+        return self.agent.storage
 
     @property
     def base_path(self) -> str:
