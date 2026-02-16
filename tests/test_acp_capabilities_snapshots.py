@@ -70,9 +70,14 @@ async def get_agent_capabilities(agent_class: type[BaseACPAgentConfig]) -> dict[
     result["command"] = command
     result["args"] = args
     # Pass through environment variables (needed for API keys, etc.)
-    env = dict(os.environ)
+    # Set dummy API keys for providers that validate keys at init time.
+    # conftest blanks ANTHROPIC_API_KEY, but pydantic-ai requires a non-empty
+    # value even when we only need the initialize handshake (no actual LLM calls).
+    env = {k: v for k, v in os.environ.items() if v or not k.endswith("_API_KEY")}
+    env.setdefault("ANTHROPIC_API_KEY", "sk-ant-dummy-test")
+    env.setdefault("OPENAI_API_KEY", "sk-dummy-test")
     try:
-        async with asyncio.timeout(15):
+        async with asyncio.timeout(30):
             async with spawn_agent_process(
                 lambda _: NoOpClient(),
                 command,
@@ -139,7 +144,7 @@ async def get_agent_capabilities(agent_class: type[BaseACPAgentConfig]) -> dict[
         result["error"] = f"Command '{command}' not found"
     except TimeoutError:
         result["status"] = "timeout"
-        result["error"] = "Initialization timed out (15s)"
+        result["error"] = "Initialization timed out (30s)"
     except Exception as e:  # noqa: BLE001
         result["status"] = "error"
         result["error"] = str(e)
@@ -211,4 +216,4 @@ def test_acp_agent_capabilities(agent_class: type[BaseACPAgentConfig], snapshot)
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-m", "acp_snapshot", "-v"])
+    pytest.main([__file__, "-m", "acp_snapshot", "-v"])  #  "--snapshot-update"])

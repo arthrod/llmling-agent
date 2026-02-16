@@ -120,4 +120,4 @@ def test_acp_agent_help_output(agent_class: type[BaseACPAgentConfig], snapshot):
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-m", "acp_snapshot", "-v"])
+    pytest.main([__file__, "-m", "acp_snapshot", "-v"])  #  "--snapshot-update"])
