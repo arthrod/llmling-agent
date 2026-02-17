@@ -6,7 +6,6 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 import uuid
 
-import anyenv
 from clawd_code_sdk.storage.models import (
     ClaudeApiMessage,
     ClaudeAssistantEntry,
@@ -33,7 +32,6 @@ from agentpool.utils.time_utils import get_now, parse_iso_timestamp
 
 if TYPE_CHECKING:
     from datetime import datetime
-    from pathlib import Path
 
     from clawd_code_sdk.storage.models import ClaudeJSONLEntry
 
@@ -219,7 +217,7 @@ def build_pydantic_message(
                     parts.append(UserPromptPart(content=block.text, timestamp=timestamp))
                 elif block.type == "tool_result" and block.tool_use_id:
                     # Reconstruct tool return - look up tool name from mapping
-                    tool_content = extract_tool_result_content(block)
+                    tool_content = block.extract_tool_result_content()
                     tool_name = tool_id_mapping.get(block.tool_use_id, "")
                     parts.append(
                         ToolReturnPart(
@@ -262,88 +260,6 @@ def build_pydantic_message(
         return None
     model = normalize_model_name(message.model)
     return ModelResponse(parts=resp_parts, usage=usage, model_name=model, timestamp=timestamp)
-
-
-def extract_tool_result_content(block: ClaudeMessageContent) -> str:
-    """Extract content from a tool_result block."""
-    if block.content is None:
-        return ""
-    if isinstance(block.content, str):
-        return block.content
-    # List of content dicts
-    text_parts = [
-        tc.get("text", "")
-        for tc in block.content
-        if isinstance(tc, dict) and tc.get("type") == "text"
-    ]
-    return "\n".join(text_parts)
-
-
-def encode_project_path(path: str) -> str:
-    """Encode a project path to Claude's format.
-
-    Claude encodes paths by replacing / with - and prepending -.
-    Example: /home/user/project -> -home-user-project
-    """
-    return path.replace("/", "-")
-
-
-def decode_project_path(encoded: str) -> str:
-    """Decode a Claude project path back to filesystem path.
-
-    Example: -home-user-project -> /home/user/project
-    """
-    encoded = encoded.removeprefix("-")
-    return "/" + encoded.replace("-", "/")
-
-
-def extract_title(session_path: Path, max_chars: int = 60) -> str | None:
-    """Extract title from session file efficiently.
-
-    Looks for a summary entry first, then falls back to the first line
-    of the first user message. Stops reading as soon as a title is found.
-
-    Args:
-        session_path: Path to the JSONL session file
-        max_chars: Maximum characters for title (truncates with '...')
-
-    Returns:
-        Extracted title or None if no suitable content found
-    """
-    if not session_path.exists():
-        return None
-
-    try:
-        with session_path.open(encoding="utf-8", errors="ignore") as fp:
-            for line in fp:
-                # Summary entries take priority
-                if '"type":"summary"' in line:
-                    try:
-                        entry = anyenv.load_json(line, return_type=dict)
-                        if summary := entry.get("summary"):
-                            return str(summary)
-                    except anyenv.JsonLoadError:
-                        pass
-
-                # First user message as fallback - stop here
-                if '"type":"user"' in line:
-                    try:
-                        entry = anyenv.load_json(line, return_type=dict)
-                        msg = entry.get("message", {})
-                        content = msg.get("content", "")
-                        if isinstance(content, str) and content:
-                            # Use first line only, strip whitespace
-                            first_line = content.split("\n")[0].strip()
-                            if len(first_line) > max_chars:
-                                return first_line[:max_chars] + "..."
-                            return first_line if first_line else None
-                    except anyenv.JsonLoadError:
-                        pass
-                    break  # Stop after first user message
-    except OSError:
-        pass
-
-    return None
 
 
 # def convert_to_pydantic_ai(
