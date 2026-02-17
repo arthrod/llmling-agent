@@ -21,7 +21,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import anyenv
-from pydantic import TypeAdapter
+from clawd_code_sdk.storage.helpers import count_session_messages, read_session, write_entry
+from clawd_code_sdk.storage.models import ClaudeAssistantEntry, ClaudeEntry, ClaudeUserEntry
 
 from agentpool.log import get_logger
 from agentpool.utils.thread_helpers import parallel_map
@@ -35,16 +36,12 @@ from agentpool_storage.claude_provider.converters import (
     extract_title,
     normalize_model_name,
 )
-from agentpool_storage.claude_provider.models import (
-    ClaudeAssistantEntry,
-    ClaudeEntry,
-    ClaudeJSONLEntry,
-    ClaudeUserEntry,
-)
 from agentpool_storage.models import TokenUsage
 
 
 if TYPE_CHECKING:
+    from clawd_code_sdk.storage.models import ClaudeJSONLEntry
+
     from agentpool.messaging import ChatMessage
     from agentpool.sessions.models import SessionData
     from agentpool_config.session import SessionQuery
@@ -52,13 +49,6 @@ if TYPE_CHECKING:
 
 
 logger = get_logger(__name__)
-
-
-def write_entry(session_path: Path, entry: ClaudeJSONLEntry) -> None:
-    """Append an entry to a session file."""
-    session_path.parent.mkdir(parents=True, exist_ok=True)
-    with session_path.open("a", encoding="utf-8") as f:
-        f.write(entry.model_dump_json(by_alias=True) + "\n")
 
 
 def _build_tool_id_mapping(entries: list[ClaudeJSONLEntry]) -> dict[str, str]:
@@ -74,58 +64,6 @@ def _build_tool_id_mapping(entries: list[ClaudeJSONLEntry]) -> dict[str, str]:
             if block.type == "tool_use" and block.id and block.name:
                 mapping[block.id] = block.name
     return mapping
-
-
-def _count_session_messages(session_path: Path) -> int:
-    """Count user/assistant messages in a session without full validation.
-
-    Only parses JSON to check the 'type' field, skipping Pydantic validation.
-
-    Args:
-        session_path: Path to the JSONL session file
-
-    Returns:
-        Number of user/assistant message entries
-    """
-    count = 0
-    with session_path.open("r", encoding="utf-8") as f:
-        for line in f:
-            stripped = line.strip()
-            if not stripped:
-                continue
-            try:
-                data = anyenv.load_json(stripped, return_type=dict)
-                if data.get("type") in ("user", "assistant"):
-                    count += 1
-            except anyenv.JsonLoadError:
-                pass
-    return count
-
-
-def _read_session(session_path: Path) -> list[ClaudeJSONLEntry]:
-    """Read all entries from a session file."""
-    entries: list[ClaudeJSONLEntry] = []
-    if not session_path.exists():
-        return entries
-
-    adapter = TypeAdapter[Any](ClaudeJSONLEntry)
-    with session_path.open("r", encoding="utf-8") as f:
-        for raw_line in f:
-            stripped = raw_line.strip()
-            if not stripped:
-                continue
-            try:
-                data = anyenv.load_json(stripped, return_type=dict)
-                entry = adapter.validate_python(data)
-                entries.append(entry)
-            except anyenv.JsonLoadError as e:
-                logger.warning(
-                    "Failed to parse JSONL line",
-                    path=str(session_path),
-                    error=str(e),
-                    raw_line=raw_line,
-                )
-    return entries
 
 
 @dataclass(slots=True)
@@ -251,7 +189,7 @@ def _parse_session_full(session_id: str, session_path: Path) -> ParsedSession | 
     Returns:
         ParsedSession with all data, or None if session is empty
     """
-    entries = _read_session(session_path)
+    entries = read_session(session_path)
     if not entries:
         return None
 
@@ -648,7 +586,7 @@ class ClaudeStorageProvider(StorageProvider):
         conv_count = 0
         msg_count = 0
         for _session_id, session_path in self._list_sessions():
-            count = _count_session_messages(session_path)
+            count = count_session_messages(session_path)
             msg_count += count
             conv_count += 1
 
@@ -662,7 +600,7 @@ class ClaudeStorageProvider(StorageProvider):
         conv_count = 0
         msg_count = 0
         for _session_id, session_path in self._list_sessions():
-            if count := _count_session_messages(session_path):
+            if count := count_session_messages(session_path):
                 conv_count += 1
                 msg_count += count
         return conv_count, msg_count
@@ -689,7 +627,7 @@ class ClaudeStorageProvider(StorageProvider):
             return []
 
         # Read entries and convert to messages
-        entries = _read_session(session_path)
+        entries = read_session(session_path)
         tool_mapping = _build_tool_id_mapping(entries)
         messages = [
             m for entry in entries if (m := entry_to_chat_message(entry, session_id, tool_mapping))
@@ -729,7 +667,7 @@ class ClaudeStorageProvider(StorageProvider):
             else self._list_sessions()
         )
         for sid, session_path in sessions:
-            entries = _read_session(session_path)
+            entries = read_session(session_path)
             tool_mapping = _build_tool_id_mapping(entries)
             for entry in entries:
                 if (
@@ -760,7 +698,7 @@ class ClaudeStorageProvider(StorageProvider):
         """
         # Fast path: if we know the session, load once and traverse in-memory
         if session_id and (session_path := self._find_session_path(session_id)):
-            entries = _read_session(session_path)
+            entries = read_session(session_path)
             tool_mapping = _build_tool_id_mapping(entries)
             # Build UUID -> entry index for O(1) lookups
             entry_by_uuid = {
@@ -817,7 +755,7 @@ class ClaudeStorageProvider(StorageProvider):
         if not source_path:
             raise ValueError(f"Source conversation not found: {source_session_id}")
         # Read source entries
-        entries = _read_session(source_path)
+        entries = read_session(source_path)
         # Find fork point
         fork_point_id: str | None = None
         if fork_from_message_id:

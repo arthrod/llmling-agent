@@ -7,6 +7,14 @@ from typing import TYPE_CHECKING
 import uuid
 
 import anyenv
+from clawd_code_sdk.storage.models import (
+    ClaudeApiMessage,
+    ClaudeAssistantEntry,
+    ClaudeMessageContent,
+    ClaudeUsage,
+    ClaudeUserEntry,
+    ClaudeUserMessage,
+)
 from pydantic_ai import RunUsage
 from pydantic_ai.messages import (
     ModelRequest,
@@ -21,21 +29,13 @@ from pydantic_ai.usage import RequestUsage
 
 from agentpool.messaging import ChatMessage, TokenCost
 from agentpool.utils.time_utils import get_now, parse_iso_timestamp
-from agentpool_storage.claude_provider.models import (
-    ClaudeApiMessage,
-    ClaudeAssistantEntry,
-    ClaudeMessageContent,
-    ClaudeUsage,
-    ClaudeUserEntry,
-    ClaudeUserMessage,
-)
 
 
 if TYPE_CHECKING:
     from datetime import datetime
     from pathlib import Path
 
-    from agentpool_storage.claude_provider.models import ClaudeJSONLEntry
+    from clawd_code_sdk.storage.models import ClaudeJSONLEntry
 
 
 def chat_message_to_entry(
