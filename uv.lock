@@ -1022,7 +1022,7 @@ wheels = [
 
 [[package]]
 name = "clawd-code-sdk"
-version = "0.1.57"
+version = "0.1.58"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anthropic" },
@@ -1030,9 +1030,9 @@ dependencies = [
     { name = "anyio" },
     { name = "mcp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b9/38/472070ff500f3a6d0a3e3fb60746aa9d3f03d571d5eab77a578d1f81658f/clawd_code_sdk-0.1.57.tar.gz", hash = "sha256:d49704b4fa14541fdf68435a4e90b76294d73e047a4205f0a40fcb0cfb95a6ca", size = 81950, upload-time = "2026-02-17T15:15:38.687Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/7a/361f2111af26c5e67766e97a317e885589b9b4a40add16a68e73f3d38784/clawd_code_sdk-0.1.58.tar.gz", hash = "sha256:fc3cafc39409cb6a464849e3912ece192bb7e75b0424d9651f0e2a0c6cea5a0a", size = 85380, upload-time = "2026-02-17T15:44:37.849Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/28/f5/10337d48112b6d34faedb0fb2b5c456a411909a93357e3429b9cabba4c36/clawd_code_sdk-0.1.57-py3-none-any.whl", hash = "sha256:3d8ab857b181bfc2d9dd1831fdc32c48a37fc7f480e4a1ac981c6e07c7c97411", size = 68400, upload-time = "2026-02-17T15:15:40.689Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/43/8e897c6e9109baa350c44f101554fce6cb87bdb2fbb9e21b897e34d42f7a/clawd_code_sdk-0.1.58-py3-none-any.whl", hash = "sha256:8e97498cd4788f24fe8506716071253fbaf8bacc939c8dafbb540e5edbebe629", size = 72239, upload-time = "2026-02-17T15:44:36.684Z" },
 ]
 
 [[package]]
@@ -3112,7 +3112,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/55/fa/96d4cc7ada2833571
 
 [[package]]
 name = "mistralai"
-version = "1.12.2"
+version = "1.12.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "eval-type-backport" },
@@ -3126,9 +3126,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/81/87/f3c4451c51462a00b09f65c5064a0baa91e4c20837dda9d9cd5e5a53d2be/mistralai-1.12.2.tar.gz", hash = "sha256:2ef7c584052e0a62ec7fefdb9a49f58f4a68c78b4f8694f67d1f2b1153c6fd39", size = 242479, upload-time = "2026-02-13T10:05:46.764Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/46/ad/3d3b17a768f641ab428bbe7c4a75283db029737778d4f56cb4a9145ba54f/mistralai-1.12.3.tar.gz", hash = "sha256:d59a788e82c16fd7d340f9f2e722ed0897fe15ccce797278b836d65fa671ef6e", size = 242961, upload-time = "2026-02-17T15:41:29Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/75/e19d300c515fece9b3e469d4f7ad00e4092ba688f0afb4aea73be677920a/mistralai-1.12.2-py3-none-any.whl", hash = "sha256:d5b2aea764d2e8065f166c1e10dccd3d9063ba1d8f57a1ece292b1a39b2c9099", size = 500576, upload-time = "2026-02-13T10:05:45.611Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/3c/d17250578195b90b0a7f2500c4d587996c9b79470dbcfe7fb9d24feb9d1b/mistralai-1.12.3-py3-none-any.whl", hash = "sha256:e164e070011dd7759ad5d969c44359939d7d73f7fec787667317b7e81ffc5a8b", size = 502976, upload-time = "2026-02-17T15:41:30.648Z" },
 ]
 
 [[package]]
