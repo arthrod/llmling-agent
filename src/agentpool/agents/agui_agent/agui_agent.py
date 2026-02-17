@@ -320,9 +320,7 @@ class AGUIAgent[TDeps = None](BaseAgent[TDeps, str]):
         # Convert existing conversation history to AG-UI format
         # AG-UI protocol expects full history with each request (stateless server)
         # Extract ModelMessages from ChatMessages
-        model_msgs: list[ModelResponse | ModelRequest] = []
-        for chat_msg in message_history.get_history():
-            model_msgs.extend(chat_msg.messages)
+        model_msgs = [m for chat_msg in message_history.get_history() for m in chat_msg.messages]
         history_messages = model_messages_to_agui(model_msgs)
         # Convert new user message content to AG-UI format
         final_content = to_agui_input_content(prompts)
