@@ -19,11 +19,6 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-from agentpool.log import get_logger
-
-
-logger = get_logger(__name__)
-
 
 StopReason = Literal["end_turn", "max_tokens", "stop_sequence", "tool_use"] | None
 ContentType = Literal["text", "tool_use", "tool_result", "thinking"]
@@ -373,7 +368,7 @@ class ClaudeAgentProgressData(ClaudeBaseModel):
 
     type: Literal["agent_progress"]
     prompt: str | None = None
-    agent_id: str | None = Field(default=None, alias="agentId")
+    agent_id: str | None = None
     message: dict[str, Any] | None = None
     normalized_messages: list[dict[str, Any]] | None = None
     resume: dict[str, Any] | None = None
@@ -399,7 +394,7 @@ class ClaudeSkillProgressData(ClaudeBaseModel):
 
     type: Literal["skill_progress"]
     prompt: str | None = None
-    agent_id: str | None = Field(default=None, alias="agentId")
+    agent_id: str | None = None
 
 
 class ClaudeTaskProgressData(ClaudeBaseModel):
@@ -449,7 +444,7 @@ class ClaudeProgressEntry(ClaudeBaseModel):
     data: ClaudeProgressData
     tool_use_id: str | None = None
     parent_tool_use_id: str | None = None
-    agent_id: str | None = Field(default=None, alias="agentId")
+    agent_id: str | None = None
     # Common fields
     cwd: str = ""
     git_branch: str = ""

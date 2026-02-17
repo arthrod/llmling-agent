@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
     from pydantic_ai import ModelRequest, ModelResponse
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
 
 # Claude Code history entry types
@@ -149,7 +149,7 @@ ClaudeCodeEntry = Annotated[
     ClaudeCodeUserEntry | ClaudeCodeAssistantEntry | ClaudeCodeQueueOperation | ClaudeCodeSummary,
     Field(discriminator="type"),
 ]
-
+_entry_adapter: TypeAdapter[ClaudeCodeEntry] = TypeAdapter(ClaudeCodeEntry)
 # Message entries that have uuid and parent_uuid (excludes queue operations)
 ClaudeCodeMessageEntry = ClaudeCodeUserEntry | ClaudeCodeAssistantEntry | ClaudeCodeSummary
 
@@ -168,17 +168,10 @@ def parse_entry(line: str) -> ClaudeCodeEntry | None:
         return None
 
     data = anyenv.load_json(line, return_type=dict)
-    match data.get("type"):
-        case "user":
-            return ClaudeCodeUserEntry.model_validate(data)
-        case "assistant":
-            return ClaudeCodeAssistantEntry.model_validate(data)
-        case "queue-operation":
-            return ClaudeCodeQueueOperation.model_validate(data)
-        case "summary":
-            return ClaudeCodeSummary.model_validate(data)
-        case _:
-            return None
+    try:
+        return _entry_adapter.validate_python(data)
+    except ValidationError:
+        return None
 
 
 def load_session(session_path: Path) -> list[ClaudeCodeEntry]:
