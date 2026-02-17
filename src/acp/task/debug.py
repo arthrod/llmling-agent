@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 import json
 import logging
@@ -19,19 +19,19 @@ if TYPE_CHECKING:
     from acp.task.state import IncomingMessage
 
 
-@dataclass
+@dataclass(kw_only=True)
 class DebugEntry:
     """Structured debug entry for ACP message tracking."""
 
-    timestamp: str
+    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     direction: Literal["outgoing", "incoming"]
     event: Literal["register", "resolve", "reject", "begin", "complete", "fail"]
     request_id: int | None
     method: str
     params: Any = None
     result: Any = None
-    error: Any = None
-    status: str | None = None
+    error: str | None = None
+    status: Literal["pending", "completed", "failed"] | None = None
     duration_ms: float | None = None
 
 
@@ -54,18 +54,15 @@ class DebuggingMessageStateStore(InMemoryMessageStateStore):
     def register_outgoing(self, request_id: int, method: str) -> asyncio.Future[Any]:
         """Register outgoing request with debug logging."""
         future = super().register_outgoing(request_id, method)
-
         # Track start time for duration calculation
         self._request_start_times[request_id] = datetime.now()
         entry = DebugEntry(
-            timestamp=datetime.now().isoformat(),
             direction="outgoing",
             event="register",
             request_id=request_id,
             method=method,
         )
         self._log_debug(entry)
-
         return future
 
     def resolve_outgoing(self, request_id: int, result: Any) -> None:
@@ -73,7 +70,6 @@ class DebuggingMessageStateStore(InMemoryMessageStateStore):
         duration = self._calculate_duration(request_id)
         super().resolve_outgoing(request_id, result)
         entry = DebugEntry(
-            timestamp=datetime.now().isoformat(),
             direction="outgoing",
             event="resolve",
             request_id=request_id,
@@ -89,7 +85,6 @@ class DebuggingMessageStateStore(InMemoryMessageStateStore):
         duration = self._calculate_duration(request_id)
         super().reject_outgoing(request_id, error)
         entry = DebugEntry(
-            timestamp=datetime.now().isoformat(),
             direction="outgoing",
             event="reject",
             request_id=request_id,
@@ -106,7 +101,6 @@ class DebuggingMessageStateStore(InMemoryMessageStateStore):
         for request_id in list(self._outgoing.keys()):
             duration = self._calculate_duration(request_id)
             entry = DebugEntry(
-                timestamp=datetime.now().isoformat(),
                 direction="outgoing",
                 event="reject",
                 request_id=request_id,
@@ -123,7 +117,6 @@ class DebuggingMessageStateStore(InMemoryMessageStateStore):
         """Begin processing incoming request with debug logging."""
         record = super().begin_incoming(method, params)
         entry = DebugEntry(
-            timestamp=datetime.now().isoformat(),
             direction="incoming",
             event="begin",
             request_id=None,
@@ -138,7 +131,6 @@ class DebuggingMessageStateStore(InMemoryMessageStateStore):
         """Complete incoming request with debug logging."""
         super().complete_incoming(record, result)
         entry = DebugEntry(
-            timestamp=datetime.now().isoformat(),
             direction="incoming",
             event="complete",
             request_id=None,
@@ -152,7 +144,6 @@ class DebuggingMessageStateStore(InMemoryMessageStateStore):
         """Fail incoming request with debug logging."""
         super().fail_incoming(record, error)
         entry = DebugEntry(
-            timestamp=datetime.now().isoformat(),
             direction="incoming",
             event="fail",
             request_id=None,
@@ -180,8 +171,7 @@ class DebuggingMessageStateStore(InMemoryMessageStateStore):
 
     def _calculate_duration(self, request_id: int) -> float | None:
         """Calculate request duration in milliseconds."""
-        start_time = self._request_start_times.get(request_id)
-        if start_time:
+        if start_time := self._request_start_times.get(request_id):
             return (datetime.now() - start_time).total_seconds() * 1000
         return None
 

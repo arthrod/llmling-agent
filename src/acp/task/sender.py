@@ -16,8 +16,6 @@ from anyio.abc import ByteSendStream
 from acp.task.supervisor import TaskSupervisor
 
 
-__all__ = ["MessageSender", "SenderFactory"]
-
 logger = logging.getLogger(__name__)
 
 SenderFactory = Callable[[ByteSendStream, TaskSupervisor], "MessageSender"]
@@ -28,14 +26,15 @@ _JSON_PRIMITIVE = (str, int, float, bool, type(None))
 def _find_non_serializable(obj: Any, path: str = "$") -> list[tuple[str, Any]]:
     """Walk a nested dict/list and return paths to non-JSON-serializable values."""
     results: list[tuple[str, Any]] = []
-    if isinstance(obj, dict):
-        for key, value in obj.items():
-            results.extend(_find_non_serializable(value, f"{path}.{key}"))
-    elif isinstance(obj, (list, tuple)):
-        for idx, value in enumerate(obj):
-            results.extend(_find_non_serializable(value, f"{path}[{idx}]"))
-    elif not isinstance(obj, _JSON_PRIMITIVE):
-        results.append((path, obj))
+    match obj:
+        case dict():
+            for key, value in obj.items():
+                results.extend(_find_non_serializable(value, f"{path}.{key}"))
+        case list() | tuple():
+            for idx, value in enumerate(obj):
+                results.extend(_find_non_serializable(value, f"{path}[{idx}]"))
+        case _ if not isinstance(obj, _JSON_PRIMITIVE):
+            results.append((path, obj))
     return results
 
 
@@ -48,11 +47,7 @@ class _PendingSend:
 class MessageSender:
     """Async message sender that queues and transmits JSON-RPC messages."""
 
-    def __init__(
-        self,
-        writer: ByteSendStream,
-        supervisor: TaskSupervisor,
-    ) -> None:
+    def __init__(self, writer: ByteSendStream, supervisor: TaskSupervisor) -> None:
         self._writer = writer
         self._queue: asyncio.Queue[_PendingSend | None] = asyncio.Queue()
         self._closed = False

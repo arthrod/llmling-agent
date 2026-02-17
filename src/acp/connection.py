@@ -94,8 +94,7 @@ class Connection:
         self._text_reader = TextReceiveStream(reader)
         self._next_request_id = 0
         self._state = state_store or InMemoryMessageStateStore()
-        self._tasks = TaskSupervisor(source="acp.Connection")
-        self._tasks.add_error_handler(self._on_task_error)
+        self._tasks = TaskSupervisor(source="acp.Connection", error_handlers=[self._on_task_error])
         self._queue = queue or InMemoryMessageQueue()
         self._closed = False
         self._sender = (sender_factory or MessageSender)(self._writer, self._tasks)

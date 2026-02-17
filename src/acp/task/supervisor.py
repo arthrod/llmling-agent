@@ -28,11 +28,11 @@ class TaskSupervisor:
     awaited reliably when the connection closes.
     """
 
-    def __init__(self, *, source: str) -> None:
+    def __init__(self, *, source: str, error_handlers: list[ErrorHandler] | None = None) -> None:
         self._source = source
         self._tasks: set[asyncio.Task[Any]] = set()
         self._closed = False
-        self._error_handlers: list[ErrorHandler] = []
+        self._error_handlers = error_handlers or []
 
     def add_error_handler(self, handler: ErrorHandler) -> None:
         self._error_handlers.append(handler)
@@ -79,10 +79,9 @@ class TaskSupervisor:
         self._closed = True
         if not self._tasks:
             return
-        tasks = list(self._tasks)
-        for task in tasks:
+        for task in self._tasks:
             task.cancel()
-        for task in tasks:
+        for task in self._tasks:
             with suppress(asyncio.CancelledError):
                 await task
         self._tasks.clear()
