@@ -344,3 +344,139 @@ def extract_title(session_path: Path, max_chars: int = 60) -> str | None:
         pass
 
     return None
+
+
+# def convert_to_pydantic_ai(
+#     entries: list[ClaudeCodeEntry],
+#     *,
+#     include_sidechains: bool = False,
+#     follow_parent_chain: bool = True,
+# ) -> list[ModelRequest | ModelResponse]:
+#     """Convert Claude Code entries to pydantic-ai message format.
+
+#     Args:
+#         entries: List of Claude Code history entries
+#         include_sidechains: If True, include sidechain (forked) messages
+#         follow_parent_chain: If True (default), reconstruct conversation order
+#             by following parentUuid links. If False, use file order.
+
+#     Returns:
+#         List of ModelRequest and ModelResponse objects
+#     """
+#     from pydantic_ai import ModelRequest, ModelResponse
+
+#     # Optionally reconstruct proper conversation order
+#     conversation: list[ClaudeCodeEntry] | list[ClaudeCodeMessageEntry]
+#     if follow_parent_chain:
+#         conversation = get_main_conversation(entries, include_sidechains=include_sidechains)
+#     else:
+#         conversation = entries
+#     from pydantic_ai.messages import (
+#         TextPart,
+#         ThinkingPart,
+#         ToolCallPart,
+#         ToolReturnPart,
+#         UserPromptPart,
+#     )
+
+#     messages: list[ModelRequest | ModelResponse] = []
+
+#     for entry in conversation:
+#         match entry:
+#             case ClaudeCodeUserEntry():
+#                 parts: list[Any] = []
+#                 metadata = {
+#                     "uuid": entry.uuid,
+#                     "timestamp": entry.timestamp.isoformat(),
+#                     "sessionId": entry.session_id,
+#                     "cwd": entry.cwd,
+#                     "gitBranch": entry.git_branch,
+#                     "isSidechain": entry.is_sidechain,
+#                 }
+
+#                 content = entry.message.content
+#                 if isinstance(content, str):
+#                     parts.append(UserPromptPart(content=content))
+#                 else:
+#                     for block in content:
+#                         match block:
+#                             case ClaudeCodeTextContent():
+#                                 parts.append(UserPromptPart(content=block.text))
+#                             case ClaudeCodeToolResultContent():
+#                                 # Extract text from tool result content
+#                                 if isinstance(block.content, str):
+#                                     result_content = block.content
+#                                 else:
+#                                     result_content = "\n".join(
+#                                         c.text
+#                                         for c in block.content
+#                                         if isinstance(c, ClaudeCodeTextContent)
+#                                     )
+#                                 parts.append(
+#                                     ToolReturnPart(
+#                                         tool_name="",  # Not available in history
+#                                         content=result_content,
+#                                         tool_call_id=block.tool_use_id,
+#                                     )
+#                                 )
+
+#                 if parts:
+#                     messages.append(ModelRequest(parts=parts, metadata=metadata))
+
+#             case ClaudeCodeAssistantEntry():
+#                 parts = []
+#                 metadata = {
+#                     "uuid": entry.uuid,
+#                     "timestamp": entry.timestamp.isoformat(),
+#                     "sessionId": entry.session_id,
+#                     "requestId": entry.request_id,
+#                     "cwd": entry.cwd,
+#                     "gitBranch": entry.git_branch,
+#                     "isSidechain": entry.is_sidechain,
+#                 }
+
+#                 for block in entry.message.content:
+#                     match block:
+#                         case ClaudeCodeTextContent():
+#                             parts.append(TextPart(content=block.text))
+#                         case ClaudeCodeToolUseContent():
+#                             parts.append(
+#                                 ToolCallPart(
+#                                     tool_name=block.name,
+#                                     args=block.input,
+#                                     tool_call_id=block.id,
+#                                 )
+#                             )
+#                         case ClaudeCodeThinkingContent():
+#                             parts.append(ThinkingPart(content=block.thinking))
+
+#                 if parts:
+#                     messages.append(
+#                         ModelResponse(
+#                             parts=parts,
+#                             model_name=entry.message.model,
+#                             provider_response_id=entry.message.id,
+#                             metadata=metadata,
+#                         )
+#                     )
+
+#             case ClaudeCodeSummary():
+#                 # Summaries can be added as system context if needed
+#                 metadata = {
+#                     "uuid": entry.uuid,
+#                     "timestamp": entry.timestamp.isoformat(),
+#                     "sessionId": entry.session_id,
+#                     "type": "summary",
+#                 }
+#                 messages.append(
+#                     ModelRequest(
+#                         parts=[UserPromptPart(content=f"[Summary]: {entry.summary}")],
+#                         metadata=metadata,
+#                     )
+#                 )
+
+#             case ClaudeCodeQueueOperation():
+#                 # Skip queue operations - they're metadata, not messages
+#                 pass
+
+#     return messages
