@@ -137,6 +137,7 @@ if TYPE_CHECKING:
         UserMessage,
     )
     from clawd_code_sdk.models import ReasoningEffort
+    from clawd_code_sdk.server_info_models import ClaudeCodeCommandInfo
     from evented_config import EventConfig
     from exxec import ExecutionEnvironment
     from pydantic_ai import UserContent
@@ -145,10 +146,6 @@ if TYPE_CHECKING:
     from tokonomics.model_names import AnthropicMaxModelName
     from toprompt import AnyPromptType
 
-    from agentpool.agents.claude_code_agent.models import (
-        ClaudeCodeCommandInfo,
-        ClaudeCodeServerInfo,
-    )
     from agentpool.agents.events import RichAgentStreamEvent
     from agentpool.agents.modes import ModeCategory
     from agentpool.common_types import AnyEventHandlerType, StrPath
@@ -451,8 +448,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
 
         # Use HTTP transport to preserve _meta field with claudecode/toolUseId
         # SDK transport drops _meta in Claude Agent SDK's query.py
-        url = f"http://127.0.0.1:{self._tool_bridge.port}/mcp"
-        cfg = McpHttpServerConfig(type="http", url=url)
+        cfg = McpHttpServerConfig(type="http", url=self._tool_bridge.url)
         mcp_config = {self._tool_bridge.resolved_server_name: cfg}
         self._mcp_servers.update(mcp_config)
         self.log.info("Toolsets initialized", toolset_count=len(self._toolsets))
@@ -764,7 +760,10 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         Commands that are not supported or not useful for external use
         are filtered out (e.g., login, logout, context, cost).
         """
-        server_info = await self.get_server_info()
+        await self.ensure_initialized()
+        assert self._client, "Client not connected after ensure_initialized"
+        server_info = await self._client.get_server_info()
+        assert server_info, "No server info returned (streaming mode should always provide it)"
         # Commands to skip - not useful or problematic in this context
         commands = [
             self._create_claude_code_command(cmd_info)
@@ -1292,16 +1291,6 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         from agentpool.agents.claude_code_agent.static_info import MODELS
 
         return MODELS
-
-    async def get_server_info(self) -> ClaudeCodeServerInfo:
-        """Get server initialization info (models, commands, account info, ...) from Claude Code."""
-        from agentpool.agents.claude_code_agent.models import ClaudeCodeServerInfo
-
-        await self.ensure_initialized()
-        assert self._client, "Client not connected after ensure_initialized"
-        raw_info = await self._client.get_server_info()
-        assert raw_info, "No server info returned (streaming mode should always provide it)"
-        return ClaudeCodeServerInfo.model_validate(raw_info)
 
     async def get_modes(self) -> list[ModeCategory]:
         """Get available mode categories for Claude Code agent.
