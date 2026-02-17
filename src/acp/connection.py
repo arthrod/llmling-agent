@@ -151,8 +151,8 @@ class Connection:
         This approach has no 64KB line limit unlike asyncio's readline().
         Pattern follows MCP SDK's stdio client implementation.
         """
+        buffer = ""
         try:
-            buffer = ""
             async for chunk in self._text_reader:
                 lines = (buffer + chunk).split("\n")
                 buffer = lines.pop()  # Keep incomplete line in buffer
@@ -243,18 +243,14 @@ class Connection:
             await self._handler(message["method"], message.get("params"), True)
 
     async def _handle_response(self, message: dict[str, Any]) -> None:
-        request_id = message["id"]
-        result = message.get("result")
-        if "result" in message:
-            self._state.resolve_outgoing(request_id, result)
-            return
-        if "error" in message:
-            dct = message.get("error") or {}
-            code = dct.get("code", -32603)
-            error = RequestError(code, dct.get("message", "Error"), dct.get("data"))
-            self._state.reject_outgoing(request_id, error)
-            return
-        self._state.resolve_outgoing(request_id, None)
+        match message:
+            case {"id": request_id, "result": result}:
+                self._state.resolve_outgoing(request_id, result)
+            case {"id": request_id, "error": {"code": code, "message": err, "data": data}}:
+                error = RequestError(code, err or "Error", data)
+                self._state.reject_outgoing(request_id, error)
+            case {"id": request_id}:
+                self._state.resolve_outgoing(request_id, None)
 
     def _on_receive_error(self, task: asyncio.Task[Any], exc: BaseException) -> None:
         logging.exception("Receive loop failed", exc_info=exc)
