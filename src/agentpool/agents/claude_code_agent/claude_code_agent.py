@@ -966,7 +966,9 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
                                     pending_tool_calls[tc_id] = block
                                     display_name = _strip_mcp_prefix(name)
                                     tool_call_part = ToolCallPart(
-                                        tool_name=display_name, args=input_data, tool_call_id=tc_id
+                                        tool_name=display_name,
+                                        args=input_data,
+                                        tool_call_id=tc_id,
                                     )
                                     current_response_parts.append(tool_call_part)
                                     # Emit FunctionToolCallEvent (triggers UI notification)
@@ -1005,14 +1007,14 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
                                         model_messages.append(response)
                                         current_response_parts = []
                                     # Get tool name from pending calls
-                                    tool_use = pending_tool_calls.pop(tc_id, None)
-                                    tool_name = _strip_mcp_prefix(
-                                        tool_use.name if tool_use else "unknown"
-                                    )
+                                    tool_use = pending_tool_calls.pop(tc_id)
+                                    tool_name = _strip_mcp_prefix(tool_use.name)
                                     tool_input = tool_use.input if tool_use else {}
                                     # Create ToolReturnPart for the result
                                     return_part = ToolReturnPart(
-                                        tool_name=tool_name, content=content, tool_call_id=tc_id
+                                        tool_name=tool_name,
+                                        content=content,
+                                        tool_call_id=tc_id,
                                     )
                                     # Emit FunctionToolResultEvent (for session.py to complete UI)
                                     yield FunctionToolResultEvent(result=return_part)
@@ -1047,13 +1049,10 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
                                     current_response_parts = []
 
                                 # Get tool name from pending calls
-                                tool_use = pending_tool_calls.pop(tc_id, None)
-                                tool_name = _strip_mcp_prefix(
-                                    tool_use.name if tool_use else "unknown"
-                                )
+                                tool_use = pending_tool_calls.pop(tc_id)
                                 # Create ToolReturnPart for the result
                                 return_part = ToolReturnPart(
-                                    tool_name=tool_name,
+                                    tool_name=_strip_mcp_prefix(tool_use.name),
                                     content=result_content,
                                     tool_call_id=tc_id,
                                 )
