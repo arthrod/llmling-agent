@@ -15,6 +15,7 @@ from acp.task.state import InMemoryMessageStateStore
 if TYPE_CHECKING:
     import asyncio
 
+    from acp import RequestError
     from acp.task.state import IncomingMessage
 
 
@@ -86,7 +87,7 @@ class DebuggingMessageStateStore(InMemoryMessageStateStore):
         self._log_debug(entry)
         self._cleanup_request_timing(request_id)
 
-    def reject_outgoing(self, request_id: int, error: Any) -> None:
+    def reject_outgoing(self, request_id: int, error: RequestError) -> None:
         """Reject outgoing request with debug logging."""
         duration = self._calculate_duration(request_id)
         super().reject_outgoing(request_id, error)
@@ -150,7 +151,7 @@ class DebuggingMessageStateStore(InMemoryMessageStateStore):
         )
         self._log_debug(entry)
 
-    def fail_incoming(self, record: IncomingMessage, error: Any) -> None:
+    def fail_incoming(self, record: IncomingMessage, error: Exception) -> None:
         """Fail incoming request with debug logging."""
         super().fail_incoming(record, error)
         entry = DebugEntry(

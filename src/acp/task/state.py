@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
+
+
+if TYPE_CHECKING:
+    from acp import RequestError
 
 
 @dataclass(slots=True)
@@ -34,7 +38,7 @@ class MessageStateStore(Protocol):
 
     def resolve_outgoing(self, request_id: int, result: Any) -> None: ...
 
-    def reject_outgoing(self, request_id: int, error: Any) -> None: ...
+    def reject_outgoing(self, request_id: int, error: RequestError) -> None: ...
 
     def reject_all_outgoing(self, error: Any) -> None: ...
 
@@ -42,7 +46,7 @@ class MessageStateStore(Protocol):
 
     def complete_incoming(self, record: IncomingMessage, result: Any) -> None: ...
 
-    def fail_incoming(self, record: IncomingMessage, error: Any) -> None: ...
+    def fail_incoming(self, record: IncomingMessage, error: Exception) -> None: ...
 
 
 class InMemoryMessageStateStore(MessageStateStore):
@@ -82,6 +86,6 @@ class InMemoryMessageStateStore(MessageStateStore):
         record.status = "completed"
         record.result = result
 
-    def fail_incoming(self, record: IncomingMessage, error: Any) -> None:
+    def fail_incoming(self, record: IncomingMessage, error: Exception) -> None:
         record.status = "failed"
         record.error = error
