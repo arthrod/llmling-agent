@@ -368,21 +368,6 @@ class ClaudeStorageProvider(StorageProvider):
             if meta.title
             else {"message_count": meta.message_count},
         )
-        last_active = (
-            parse_iso_timestamp(meta.last_timestamp, fallback=created_at)
-            if meta.last_timestamp
-            else created_at
-        )
-        return SessionData(
-            session_id=meta.session_id,
-            agent_name="claude_code",
-            cwd=meta.cwd or "",
-            created_at=created_at,
-            last_active=last_active,
-            metadata={"title": meta.title, "message_count": meta.message_count}
-            if meta.title
-            else {"message_count": meta.message_count},
-        )
 
     async def filter_messages(self, query: SessionQuery) -> list[ChatMessage[str]]:
         """Filter messages based on query.
@@ -674,10 +659,7 @@ class ClaudeStorageProvider(StorageProvider):
             entries = read_session(session_path)
             tool_mapping = _build_tool_id_mapping(entries)
             for entry in entries:
-                if (
-                    isinstance(entry, ClaudeUserEntry | ClaudeAssistantEntry)
-                    and entry.uuid == message_id
-                ):
+                if isinstance(entry, ClaudeEntry) and entry.uuid == message_id:
                     return entry_to_chat_message(entry, sid, tool_mapping)
 
         return None
