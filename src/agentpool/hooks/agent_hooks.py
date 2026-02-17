@@ -6,14 +6,14 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from agentpool.hooks.base import HookResult
+from agentpool.hooks.base import HookInput, HookResult
 from agentpool.log import get_logger
 
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from agentpool.hooks.base import Hook, HookInput
+    from agentpool.hooks.base import Hook
 
 
 logger = get_logger(__name__)
@@ -59,12 +59,12 @@ class AgentHooks:
         Returns:
             Combined hook result. If any hook denies, the run should be blocked.
         """
-        input_data: HookInput = {
-            "event": "pre_run",
-            "agent_name": agent_name,
-            "prompt": prompt,
-            "session_id": session_id,
-        }
+        input_data = HookInput(
+            event="pre_run",
+            agent_name=agent_name,
+            prompt=prompt,
+            session_id=session_id,
+        )
         return await self._run_hooks(self.pre_run, input_data)
 
     async def run_post_run_hooks(
@@ -86,13 +86,13 @@ class AgentHooks:
         Returns:
             Combined hook result.
         """
-        input_data: HookInput = {
-            "event": "post_run",
-            "agent_name": agent_name,
-            "prompt": prompt,
-            "result": result,
-            "session_id": session_id,
-        }
+        input_data = HookInput(
+            event="post_run",
+            agent_name=agent_name,
+            prompt=prompt,
+            result=result,
+            session_id=session_id,
+        )
         return await self._run_hooks(self.post_run, input_data)
 
     async def run_pre_tool_hooks(
@@ -115,13 +115,13 @@ class AgentHooks:
             Combined hook result. If any hook denies, the tool call should be blocked.
             May include modified_input to change tool arguments.
         """
-        input_data: HookInput = {
-            "event": "pre_tool_use",
-            "agent_name": agent_name,
-            "tool_name": tool_name,
-            "tool_input": tool_input,
-            "session_id": session_id,
-        }
+        input_data = HookInput(
+            event="pre_tool_use",
+            agent_name=agent_name,
+            tool_name=tool_name,
+            tool_input=tool_input,
+            session_id=session_id,
+        )
         return await self._run_hooks(self.pre_tool_use, input_data)
 
     async def run_post_tool_hooks(
@@ -147,15 +147,15 @@ class AgentHooks:
         Returns:
             Combined hook result. May include additional_context to inject.
         """
-        input_data: HookInput = {
-            "event": "post_tool_use",
-            "agent_name": agent_name,
-            "tool_name": tool_name,
-            "tool_input": tool_input,
-            "tool_output": tool_output,
-            "duration_ms": duration_ms,
-            "session_id": session_id,
-        }
+        input_data = HookInput(
+            event="post_tool_use",
+            agent_name=agent_name,
+            tool_name=tool_name,
+            tool_input=tool_input,
+            tool_output=tool_output,
+            duration_ms=duration_ms,
+            session_id=session_id,
+        )
         return await self._run_hooks(self.post_tool_use, input_data)
 
     @staticmethod
@@ -192,7 +192,7 @@ class AgentHooks:
         )
 
         # Combine results
-        combined: HookResult = {"decision": "allow"}
+        combined = HookResult(decision="allow")
         reasons: list[str] = []
         contexts: list[str] = []
 
