@@ -60,7 +60,7 @@ import contextlib
 from decimal import Decimal
 from pathlib import Path
 import re
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, cast
 import uuid
 
 import anyio
@@ -131,6 +131,7 @@ if TYPE_CHECKING:
         McpServerConfig,
         PermissionMode,
         PermissionResult,
+        ToolInput,
         ToolPermissionContext,
         ToolUseBlock,
         UserMessage,
@@ -574,7 +575,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
     async def _can_use_tool(
         self,
         tool_name: str,
-        input_data: dict[str, Any],
+        input_data: ToolInput,
         context: ToolPermissionContext,
     ) -> PermissionResult:
         """Handle tool permission requests.
@@ -595,10 +596,11 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
 
         from agentpool.agents.claude_code_agent.elicitation import handle_clarifying_questions
 
+        input_dict = cast(dict[str, Any], input_data)
         # Handle AskUserQuestion specially - this is Claude asking for clarification
         if tool_name == "AskUserQuestion":
             agent_ctx = self.get_context()
-            return await handle_clarifying_questions(agent_ctx, input_data, context)
+            return await handle_clarifying_questions(agent_ctx, input_dict, context)
         # Auto-grant if bypassPermissions mode is active
         if self._permission_mode == "bypassPermissions":
             return PermissionResultAllow()
@@ -633,13 +635,13 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             display_name = _strip_mcp_prefix(tool_name)
             self.log.debug("Permission request", tool_name=display_name, tool_call_id=tool_call_id)
             ctx = self.get_context(
-                tool_call_id=tool_call_id, tool_input=input_data, tool_name=tool_name
+                tool_call_id=tool_call_id, tool_input=input_dict, tool_name=tool_name
             )
             result = await self._input_provider.get_tool_confirmation(
                 context=ctx,
                 tool_name=display_name,
                 tool_description=f"Claude Code tool: {tool_name}",
-                args=input_data,
+                args=input_dict,
             )
             return confirmation_result_to_native(result)
         # Default: deny if no input provider
@@ -845,6 +847,17 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         wait_for_connections: bool | None = None,
         store_history: bool = True,
     ) -> AsyncIterator[RichAgentStreamEvent[TResult]]:
+        from anthropic.types import (
+            InputJSONDelta,
+            RawContentBlockDeltaEvent,
+            RawContentBlockStartEvent,
+            RawContentBlockStopEvent,
+            TextBlock as AnthTextBlock,
+            TextDelta,
+            ThinkingBlock as AnthThinkingBlock,
+            ThinkingDelta,
+            ToolUseBlock as AnthToolUseBlock,
+        )
         from clawd_code_sdk import (
             AssistantMessage,
             Message,
@@ -914,7 +927,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             first_msg = await anext(stream)
             assert isinstance(first_msg, SystemMessage)
             assert first_msg.subtype == "init"
-            self._sdk_session_id = first_msg.data["session_id"]
+            self._sdk_session_id = first_msg.session_id
             # Persist SDK session ID to storage for cross-referencing
             if self.storage and self.session_id:
                 await self.storage.update_sdk_session_id(self.session_id, self._sdk_session_id)
@@ -1072,23 +1085,22 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
                     # Handle StreamEvent for real-time streaming
                     elif isinstance(message, StreamEvent):
                         event_data = message.event
-                        event_type = event_data.get("type")
-                        index = event_data.get("index", 0)
-                        content_block = event_data.get("content_block", {})
-                        block_type = content_block.get("type")
-                        delta = event_data.get("delta", {})
-                        match event_type, block_type or delta.get("type"):
+                        match event_data:
                             # content_block_start events
-                            case "content_block_start", "text":
+                            case RawContentBlockStartEvent(
+                                index=index, content_block=AnthTextBlock()
+                            ):
                                 yield PartStartEvent.text(index=index, content="")
 
-                            case "content_block_start", "thinking":
+                            case RawContentBlockStartEvent(
+                                index=index, content_block=AnthThinkingBlock()
+                            ):
                                 yield PartStartEvent.thinking(index=index, content="")
 
-                            case "content_block_start", "tool_use":
+                            case RawContentBlockStartEvent(
+                                content_block=AnthToolUseBlock(id=tc_id, name=raw_tool_name)
+                            ):
                                 # Emit ToolCallStartEvent early (args still streaming)
-                                tc_id = content_block.get("id", "")
-                                raw_tool_name = content_block.get("name", "")
                                 tool_name = _strip_mcp_prefix(raw_tool_name)
                                 tool_accumulator.start(tc_id, tool_name)
                                 # Track for permission matching - callback uses raw name
@@ -1107,31 +1119,34 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
                                 )
 
                             # content_block_delta events
-                            case "content_block_delta", "text_delta":
-                                if delta := delta.get("text", ""):
-                                    text_delta = TextPartDelta(content_delta=delta)
-                                    yield PartDeltaEvent(index=index, delta=text_delta)
+                            case RawContentBlockDeltaEvent(
+                                index=index, delta=TextDelta(text=text)
+                            ) if text:
+                                text_delta = TextPartDelta(content_delta=text)
+                                yield PartDeltaEvent(index=index, delta=text_delta)
 
-                            case "content_block_delta", "thinking_delta":
-                                if delta := delta.get("thinking", ""):
-                                    thinking_delta = ThinkingPartDelta(content_delta=delta)
-                                    yield PartDeltaEvent(index=index, delta=thinking_delta)
+                            case RawContentBlockDeltaEvent(
+                                index=index, delta=ThinkingDelta(thinking=thinking)
+                            ) if thinking:
+                                thinking_delta = ThinkingPartDelta(content_delta=thinking)
+                                yield PartDeltaEvent(index=index, delta=thinking_delta)
 
-                            case "content_block_delta", "input_json_delta":
+                            case RawContentBlockDeltaEvent(
+                                index=index, delta=InputJSONDelta(partial_json=partial_json)
+                            ) if partial_json:
                                 # Accumulate tool argument JSON fragments
-                                if partial_json := delta.get("partial_json", ""):
-                                    # Find which tool call this belongs to by index
-                                    for tc_id in tool_accumulator._calls:
-                                        tool_accumulator.add_args(tc_id, partial_json)
-                                        tool_delta = ToolCallPartDelta(
-                                            args_delta=partial_json,
-                                            tool_call_id=tc_id,
-                                        )
-                                        yield PartDeltaEvent(index=index, delta=tool_delta)
-                                        break  # Only one tool call streams at a time
+                                # Find which tool call this belongs to by index
+                                for tc_id in tool_accumulator._calls:
+                                    tool_accumulator.add_args(tc_id, partial_json)
+                                    tool_delta = ToolCallPartDelta(
+                                        args_delta=partial_json,
+                                        tool_call_id=tc_id,
+                                    )
+                                    yield PartDeltaEvent(index=index, delta=tool_delta)
+                                    break  # Only one tool call streams at a time
 
                             # content_block_stop events
-                            case "content_block_stop", _:
+                            case RawContentBlockStopEvent(index=index):
                                 # Emit with empty part - content was accumulated via deltas
                                 yield PartEndEvent(index=index, part=TextPart(content=""))
 
