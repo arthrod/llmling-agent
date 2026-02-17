@@ -472,7 +472,7 @@ wheels = [
 
 [[package]]
 name = "anthropic"
-version = "0.79.0"
+version = "0.80.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -484,9 +484,9 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/15/b1/91aea3f8fd180d01d133d931a167a78a3737b3fd39ccef2ae8d6619c24fd/anthropic-0.79.0.tar.gz", hash = "sha256:8707aafb3b1176ed6c13e2b1c9fb3efddce90d17aee5d8b83a86c70dcdcca871", size = 509825, upload-time = "2026-02-07T18:06:18.388Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7f/63/791e14ef5a8ecb485cef5b5d058c7ca3ad6c50a2f94cf4cea5231c6b7c16/anthropic-0.80.0.tar.gz", hash = "sha256:ef042586673fdcab2a6ffd381aa5f9a1bcce38ffe73c07fe70bd56d12b8124ba", size = 533291, upload-time = "2026-02-17T19:26:26.717Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/b2/cc0b8e874a18d7da50b0fda8c99e4ac123f23bf47b471827c5f6f3e4a767/anthropic-0.79.0-py3-none-any.whl", hash = "sha256:04cbd473b6bbda4ca2e41dd670fe2f829a911530f01697d0a1e37321eb75f3cf", size = 405918, upload-time = "2026-02-07T18:06:20.246Z" },
+    { url = "https://files.pythonhosted.org/packages/b2/4b/665f29338f51d0c2f9e04b276ea54cc1e957ae5c521a0ad868aa80abc608/anthropic-0.80.0-py3-none-any.whl", hash = "sha256:dad0e40ec371ee686e9ffb2e0cb461a0ed51447fa100927fb5d39b174c286d6f", size = 453667, upload-time = "2026-02-17T19:26:29.96Z" },
 ]
 
 [[package]]
@@ -1022,7 +1022,7 @@ wheels = [
 
 [[package]]
 name = "clawd-code-sdk"
-version = "0.1.60"
+version = "0.1.63"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anthropic" },
@@ -1030,9 +1030,9 @@ dependencies = [
     { name = "anyio" },
     { name = "mcp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0e/70/a11071a76c930817261bae25321a6f539b9d56290ae5561f4b497cb6181e/clawd_code_sdk-0.1.60.tar.gz", hash = "sha256:0176c34b38a8f2be638dc22d7f0d06cfdde9701be6fae52c84a48926b0050c5b", size = 85451, upload-time = "2026-02-17T17:10:41.803Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/21/ea/2674d16bb111cce4b5c50235535f2f5299d46fa2a16311470aeef0642732/clawd_code_sdk-0.1.63.tar.gz", hash = "sha256:75bb9538e7d97c388aa234024c147418774959ca7c0e056a4770a24abd7a284f", size = 89389, upload-time = "2026-02-17T20:18:39.681Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5b/57/4ff56dce25e0e57ebe238f51cd16914f04219803c519ac56977ef8e202b1/clawd_code_sdk-0.1.60-py3-none-any.whl", hash = "sha256:6190676ab249d4ee64f80a6fc084294bfa42d97506cc93adb2b6743116911e41", size = 72323, upload-time = "2026-02-17T17:10:40.666Z" },
+    { url = "https://files.pythonhosted.org/packages/58/15/97d5626c475d6013c83f0d312550f16d76ecdbe779a9a97a22424b873a6e/clawd_code_sdk-0.1.63-py3-none-any.whl", hash = "sha256:d6fac7abb105f9d332c019b72e7709631858cba64c836beb57179e4beada4237", size = 77515, upload-time = "2026-02-17T20:18:36.27Z" },
 ]
 
 [[package]]
@@ -1859,15 +1859,15 @@ wheels = [
 
 [[package]]
 name = "genai-prices"
-version = "0.0.53"
+version = "0.0.54"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a6/95/f7d61df3b0c42dcad3e3ab9327aa466c556a2b24f9aea6b48e4fe4ab19ca/genai_prices-0.0.53.tar.gz", hash = "sha256:0afe7595d77dbcd80473ad168385c7500c7fbc6c2b370840ffdbfea9e0902544", size = 59235, upload-time = "2026-02-11T20:47:17.876Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8e/20/d64d04c7870db01232f8f8e36dec2072281b1f594b924200aa017778eec2/genai_prices-0.0.54.tar.gz", hash = "sha256:9d985affc19d055be16613b0c5e49d182d4c2164cf1587129f9996dfb9a3cb8d", size = 59588, upload-time = "2026-02-17T20:26:06.849Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ae/1c/d544657381270fe21afc2a4dc560e1607e28d7115555cef148271cb25522/genai_prices-0.0.53-py3-none-any.whl", hash = "sha256:5a5dfd92089e9e8a174f7097a1521e36f4e75c74cfbdfb1ec56283bae3c0c96e", size = 61850, upload-time = "2026-02-11T20:47:16.774Z" },
+    { url = "https://files.pythonhosted.org/packages/34/71/d2a941b0ca01186912fedb096d8eef7b3e1680c86fdcf8fe3dc84e76d5a9/genai_prices-0.0.54-py3-none-any.whl", hash = "sha256:5b45012b2981b7d4d42c49c8614ee95420fec244c87542542045786b36fc2235", size = 62198, upload-time = "2026-02-17T20:26:05.186Z" },
 ]
 
 [[package]]
@@ -2652,7 +2652,7 @@ wheels = [
 
 [[package]]
 name = "langfuse"
-version = "3.14.2"
+version = "3.14.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
@@ -2666,9 +2666,9 @@ dependencies = [
     { name = "requests" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/47/6d/545ae73a9e7800e9aefe67e39819fb8a5b759374c2a88326027b86467fc1/langfuse-3.14.2.tar.gz", hash = "sha256:a3001aaf04b3a792b0dc4401563c000cf8210ae0275348d7ae9887b66ade3375", size = 235186, upload-time = "2026-02-16T16:27:43.132Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/86/44/1da5d5fb5a07949cd5bd53cabef1dafc1af272792f51277e6226eb96ceaa/langfuse-3.14.3.tar.gz", hash = "sha256:6d1529ae88d6f2ab74e255bb79537ae37aa1a576a1ec78f4643a7a6a00502f12", size = 235121, upload-time = "2026-02-17T17:43:25.903Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/47/9b/ecd77bcf27b25a4e9090a0a7c846eed491df3e244f88b49fb50c77566480/langfuse-3.14.2-py3-none-any.whl", hash = "sha256:29b4d3e224c4d3ad6b3303ae5987a16aa760e1c4f704dcf3cb4a9b580f61cba8", size = 420396, upload-time = "2026-02-16T16:27:40.975Z" },
+    { url = "https://files.pythonhosted.org/packages/bd/cf/708c3aefa7687995eb4d3ae556e1adcaf1c4e99f5315810e9809c8cd9219/langfuse-3.14.3-py3-none-any.whl", hash = "sha256:e65f4168279dbc45b800021c59855a3268cf85d81e3275f7015441bf7f365bcb", size = 420438, upload-time = "2026-02-17T17:43:24.097Z" },
 ]
 
 [[package]]
