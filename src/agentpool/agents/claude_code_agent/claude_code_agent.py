@@ -869,6 +869,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             UserMessage,
         )
         from clawd_code_sdk.models import StreamEvent
+        from clawd_code_sdk.models.messages import RateLimitMessage
 
         await self.ensure_initialized()
         # Initialize session_id on first run and log to storage
@@ -924,8 +925,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             # Capture SDK session ID from init message
             stream = client.receive_response()
             first_msg = await anext(stream)
-            assert isinstance(first_msg, SystemMessage)
-            assert first_msg.subtype == "init"
+            assert isinstance(first_msg, SystemMessage | RateLimitMessage)
             self._sdk_session_id = first_msg.session_id
             # Persist SDK session ID to storage for cross-referencing
             if self.storage and self.session_id:
