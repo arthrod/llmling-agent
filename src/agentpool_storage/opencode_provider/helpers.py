@@ -11,10 +11,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from pydantic_ai import (
-    AudioUrl,
     BinaryContent,
-    DocumentUrl,
-    ImageUrl,
     ModelRequest,
     ModelResponse,
     RequestUsage,
@@ -24,18 +21,17 @@ from pydantic_ai import (
     ToolCallPart,
     ToolReturnPart,
     UserPromptPart,
-    VideoUrl,
 )
 
 from agentpool.log import get_logger
 from agentpool.messaging import ChatMessage, TokenCost
+from agentpool.utils.pydantic_ai_helpers import to_user_content
 from agentpool.utils.time_utils import ms_to_datetime
 
 
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from pydantic_ai import MultiModalContent
     from pydantic_ai.messages import UserContent
 
 
@@ -53,23 +49,6 @@ logger = get_logger(__name__)
 
 # message row: (id, session_id, time_created, time_updated, data)
 # part row: (id, message_id, session_id, time_created, time_updated, data)
-
-
-def to_user_content(url: str, mime: str) -> MultiModalContent:
-    """Convert a URL + MIME type to the appropriate pydantic-ai content type."""
-    if mime.startswith("image/"):
-        mime_typ = mime if mime != "image/*" else None
-        return ImageUrl(url=url, media_type=mime_typ)
-    if mime.startswith("audio/"):
-        mime_typ = mime if mime != "audio/*" else None
-        return AudioUrl(url=url, media_type=mime_typ)
-    if mime.startswith("video/"):
-        mime_typ = mime if mime != "video/*" else None
-        return VideoUrl(url=url, media_type=mime_typ)
-    if mime == "application/pdf" or mime.startswith("application/"):
-        return DocumentUrl(url=url, media_type=mime)
-    # Unknown MIME type - treat as document
-    return DocumentUrl(url=url, media_type=mime)
 
 
 def extract_text_content(parts: list[dict[str, Any]]) -> str:

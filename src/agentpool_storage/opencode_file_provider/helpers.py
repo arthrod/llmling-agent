@@ -29,6 +29,7 @@ from pydantic_ai import (
 
 from agentpool.log import get_logger
 from agentpool.messaging import ChatMessage, TokenCost
+from agentpool.utils.pydantic_ai_helpers import to_user_content
 from agentpool.utils.time_utils import ms_to_datetime
 from agentpool_server.opencode_server.models import (
     AssistantMessage,
@@ -52,7 +53,6 @@ if TYPE_CHECKING:
     from datetime import datetime
     from pathlib import Path
 
-    from pydantic_ai import MultiModalContent
     from pydantic_ai.messages import UserContent
 
     from agentpool_server.opencode_server.models import (
@@ -62,22 +62,6 @@ if TYPE_CHECKING:
 
 
 logger = get_logger(__name__)
-
-
-def to_user_content(url: str, mime: str) -> MultiModalContent:
-    if mime.startswith("image/"):
-        mime_typ = mime if mime != "image/*" else None
-        return ImageUrl(url=url, media_type=mime_typ)
-    if mime.startswith("audio/"):
-        mime_typ = mime if mime != "audio/*" else None
-        return AudioUrl(url=url, media_type=mime_typ)
-    if mime.startswith("video/"):
-        mime_typ = mime if mime != "video/*" else None
-        return VideoUrl(url=url, media_type=mime_typ)
-    if mime == "application/pdf" or mime.startswith("application/"):
-        return DocumentUrl(url=url, media_type=mime)
-    # Unknown MIME type - treat as document
-    return DocumentUrl(url=url, media_type=mime)
 
 
 def convert_user_content_to_parts(
