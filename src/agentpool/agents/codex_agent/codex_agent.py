@@ -237,7 +237,7 @@ class CodexAgent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT])
         # Add bridge's MCP server config to extra servers
         if self._tool_bridge._actual_port is None:
             raise RuntimeError("Bridge not started - call start() first")
-        url = f"http://127.0.0.1:{self._tool_bridge.port}/mcp"
+        url = self._tool_bridge.url
         bridge_config = (self._tool_bridge.resolved_server_name, CodexHttpMcpServer(url=url))
         self._extra_mcp_servers.append(bridge_config)
 
@@ -353,10 +353,7 @@ class CodexAgent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT])
         """Stream events from Codex turn execution."""
         from agentpool.agents.events import PlanUpdateEvent
         from agentpool.messaging.messages import TokenCost
-        from codex_adapter.events import (
-            ThreadTokenUsageUpdatedEvent,
-            TurnStartedEvent,
-        )
+        from codex_adapter.events import ThreadTokenUsageUpdatedEvent, TurnStartedEvent
 
         if not self._client or not self._sdk_session_id:
             raise AgentNotInitializedError

@@ -39,6 +39,7 @@ from agentpool.agents.exceptions import (
 from agentpool.log import get_logger
 from agentpool.messaging import ChatMessage
 from agentpool.tools import ToolManager
+from agentpool.utils.subprocess_utils import start_process
 from agentpool.utils.token_breakdown import calculate_usage_from_parts
 
 
@@ -222,7 +223,7 @@ class AGUIAgent[TDeps = None](BaseAgent[TDeps, str]):
         self._client = get_client(self.headers, self.timeout)
         self._sdk_session_id = self.session_id
         if self._startup_command:  # Start server if startup command is provided
-            await self._start_server()
+            self._startup_process = await start_process(self._startup_command, self._startup_delay)
         self.log.debug("AG-UI client initialized", endpoint=self.endpoint)
         return self
 
@@ -271,30 +272,6 @@ class AGUIAgent[TDeps = None](BaseAgent[TDeps, str]):
         """Cancel the current stream task."""
         if self._current_stream_task and not self._current_stream_task.done():
             self._current_stream_task.cancel()
-
-    async def _start_server(self) -> None:
-        """Start the AG-UI server subprocess."""
-        if not self._startup_command:
-            return
-
-        self.log.info("Starting AG-UI server", command=self._startup_command)
-        self._startup_process = await asyncio.create_subprocess_shell(
-            self._startup_command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            start_new_session=True,
-        )
-        self.log.debug("Waiting for server startup", delay=self._startup_delay)
-        await anyio.sleep(self._startup_delay)
-        # Check if process is still running
-        if self._startup_process.returncode is not None:
-            stderr = ""
-            if self._startup_process.stderr:
-                stderr = (await self._startup_process.stderr.read()).decode()
-            msg = f"Startup process exited with code {self._startup_process.returncode}: {stderr}"
-            raise RuntimeError(msg)
-
-        self.log.info("AG-UI server started")
 
     async def _stream_events(  # noqa: PLR0915
         self,
