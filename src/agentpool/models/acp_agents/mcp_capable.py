@@ -136,6 +136,16 @@ class AuggieACPAgentConfig(BaseACPAgentConfig):
     )
     """Cache directory (default: ~/.augment)."""
 
+    persona: str | None = Field(default=None, title="Agent Persona", examples=["some_name"])
+    """Agent persona."""
+
+    session_db: str | None = Field(
+        default=None,
+        title="Session DB Path",
+        examples=["~/custom_path/session.db"],
+    )
+    """Path to the session database."""
+
     retry_timeout: int | None = Field(default=None, title="Retry Timeout", examples=[30, 60])
     """Timeout for rate-limit retries (seconds)."""
 

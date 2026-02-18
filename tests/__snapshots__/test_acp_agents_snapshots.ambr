@@ -122,6 +122,7 @@
     -i, --instruction <text>     Instruction (mutually exclusive with --instruction-file)
     -if, --instruction-file <p>  Instruction file (mutually exclusive with --instruction)
     --image <path...>            Image file(s) to attach (PNG, JPEG, GIF, WEBP)
+    --enhance-prompt             Enhance the prompt before sending (requires --print)
   
   Output & Interaction
     -p, --print                  Print mode (one-shot). Note that the indexing confirmation
@@ -134,6 +135,7 @@
   
   Configuration Options
     -m, --model <id>             Select model to use
+    --persona <id>               Select agent persona to use
     -w, --workspace-root <path>  Workspace root (auto-detects git root if absent)
     --rules <path>               Additional rules file (repeatable)
     --augment-cache-dir <path>   Cache directory (default: ~/.augment)
@@ -205,6 +207,7 @@
         --env-from-file strings   Set environment variables from file
     -h, --help                    help for acp
         --models-gateway string   Set the models gateway address
+    -s, --session-db string       Path to the session database (default "/home/phil65/.cagent/session.db")
         --working-dir string      Set the working directory for the session (applies to tools and relative paths)
   
   Global Flags:
@@ -309,25 +312,26 @@
   ----------------------------------------------------------------------
   Usage: gemini [options] [command]
   
-  Gemini CLI - Launch an interactive CLI, use -p/--prompt for non-interactive mode
+  Gemini CLI - Defaults to interactive mode. Use -p/--prompt for non-interactive (headless) mode.
   
   Commands:
     gemini [query..]             Launch Gemini CLI  [default]
     gemini mcp                   Manage MCP servers
     gemini extensions <command>  Manage Gemini CLI extensions.  [aliases: extension]
+    gemini skills <command>      Manage agent skills.  [aliases: skill]
     gemini hooks <command>       Manage Gemini CLI hooks.  [aliases: hook]
   
   Positionals:
-    query  Positional prompt. Defaults to one-shot; use -i/--prompt-interactive for interactive.
+    query  Initial prompt. Runs in interactive mode by default; use -p/--prompt for non-interactive.
   
   Options:
-    -d, --debug                     Run in debug mode?  [boolean] [default: false]
+    -d, --debug                     Run in debug mode (open debug console with F12)  [boolean] [default: false]
     -m, --model                     Model  [string]
-    -p, --prompt                    Prompt. Appended to input on stdin (if any).  [deprecated: Use the positional prompt instead. This flag will be removed in a future version.] [string]
+    -p, --prompt                    Run in non-interactive (headless) mode with the given prompt. Appended to input on stdin (if any).  [string]
     -i, --prompt-interactive        Execute the provided prompt and continue in interactive mode  [string]
     -s, --sandbox                   Run in sandbox?  [boolean]
     -y, --yolo                      Automatically accept all actions (aka YOLO mode, see https://www.youtube.com/watch?v=xvFZjo5PgG0 for more details)?  [boolean] [default: false]
-        --approval-mode             Set the approval mode: default (prompt for approval), auto_edit (auto-approve edit tools), yolo (auto-approve all tools)  [string] [choices: "default", "auto_edit", "yolo"]
+        --approval-mode             Set the approval mode: default (prompt for approval), auto_edit (auto-approve edit tools), yolo (auto-approve all tools), plan (read-only mode)  [string] [choices: "default", "auto_edit", "yolo", "plan"]
         --experimental-acp          Starts the agent in ACP mode  [boolean]
         --allowed-mcp-server-names  Allowed MCP server names  [array]
         --allowed-tools             Tools that are allowed to run without confirmation  [array]
@@ -339,6 +343,8 @@
         --include-directories       Additional directories to include in the workspace (comma-separated or multiple --include-directories)  [array]
         --screen-reader             Enable screen reader mode for accessibility.  [boolean]
     -o, --output-format             The format of the CLI output.  [string] [choices: "text", "json", "stream-json"]
+        --raw-output                Disable sanitization of model output (e.g. allow ANSI escape sequences). WARNING: This can be a security risk if the model output is untrusted.  [boolean]
+        --accept-raw-output-risk    Suppress the security warning when using --raw-output.  [boolean]
     -v, --version                   Show version number  [boolean]
     -h, --help                      Show help  [boolean]
   '''
@@ -467,16 +473,18 @@
   start ACP (Agent Client Protocol) server
   
   Options:
-    -h, --help        show help                                                              [boolean]
-    -v, --version     show version number                                                    [boolean]
-        --print-logs  print logs to stderr                                                   [boolean]
-        --log-level   log level                   [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-        --port        port to listen on                                          [number] [default: 0]
-        --hostname    hostname to listen on                            [string] [default: "127.0.0.1"]
-        --mdns        enable mDNS service discovery (defaults hostname to 0.0.0.0)
+    -h, --help         show help                                                             [boolean]
+    -v, --version      show version number                                                   [boolean]
+        --print-logs   print logs to stderr                                                  [boolean]
+        --log-level    log level                  [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
+        --port         port to listen on                                         [number] [default: 0]
+        --hostname     hostname to listen on                           [string] [default: "127.0.0.1"]
+        --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)
                                                                             [boolean] [default: false]
-        --cors        additional domains to allow for CORS                       [array] [default: []]
-        --cwd         working directory           [string] [default: "/home/phil65/dev/oss/agentpool"]
+        --mdns-domain  custom domain name for mDNS service (default: opencode.local)
+                                                                  [string] [default: "opencode.local"]
+        --cors         additional domains to allow for CORS                      [array] [default: []]
+        --cwd          working directory          [string] [default: "/home/phil65/dev/oss/agentpool"]
   '''
 # ---
 # name: test_acp_agent_help_output[OpenHandsACPAgentConfig]
@@ -487,10 +495,29 @@
   
   CLI Help Output:
   ----------------------------------------------------------------------
-  usage: openhands acp [-h]
+  usage: openhands acp [-h] [--resume [RESUME]] [--last]
+                       [--always-approve | --llm-approve] [--override-with-envs]
+                       [--cloud] [--cloud-url CLOUD_URL]
   
   options:
-    -h, --help  show this help message and exit
+    -h, --help            show this help message and exit
+    --resume [RESUME]     Conversation ID to resume. If no ID provided, shows
+                          list of recent conversations
+    --last                Resume the most recent conversation (use with
+                          --resume)
+    --always-approve, --yolo
+                          Auto-approve all actions without asking for
+                          confirmation
+    --llm-approve         Enable LLM-based security analyzer (only confirm LLM-
+                          predicted high-risk actions)
+    --override-with-envs  Override LLM settings with environment variables
+                          (LLM_API_KEY, LLM_BASE_URL, LLM_MODEL). By default,
+                          environment variables are ignored.
+    --cloud               Use OpenHands Cloud workspace instead of local
+                          workspace. Requires authentication via 'openhands
+                          login'.
+    --cloud-url CLOUD_URL
+                          OpenHands Cloud API URL
   '''
 # ---
 # name: test_acp_agent_help_output[StakpakACPAgentConfig]
