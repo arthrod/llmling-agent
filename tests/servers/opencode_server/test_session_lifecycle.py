@@ -12,16 +12,17 @@ Note: The OpenCode API uses camelCase field names with "ID" suffix:
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
-
-from httpx import AsyncClient
 
 from agentpool_server.opencode_server.models import SessionStatus
 from agentpool_server.opencode_server.models.events import SessionCreatedEvent
 
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
+    from httpx import AsyncClient
+
     from agentpool_server.opencode_server.state import ServerState
     from tests.servers.opencode_server.conftest import EventCapture
 
