@@ -97,10 +97,9 @@ class MemoryStorageProvider(StorageProvider):
         model: str | None = None,
         agent_type: str | None = None,
     ) -> None:
-        """Store conversation in memory."""
-        if next((i for i in self.conversations if i["id"] == session_id), None):
-            msg = f"Duplicate conversation ID: {session_id}"
-            raise ValueError(msg)
+        """Store conversation in memory (idempotent)."""
+        if any(c["id"] == session_id for c in self.conversations):
+            return
         self.conversations.append({
             "id": session_id,
             "agent_name": node_name,
