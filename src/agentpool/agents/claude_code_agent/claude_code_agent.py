@@ -395,6 +395,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             mcp_servers=config.get_mcp_servers(),
             env_vars=config.env_vars,
             add_dir=config.add_dir,
+            builtin_subagents=config.get_subagent_configs(),
             builtin_tools=config.builtin_tools,
             fallback_model=config.fallback_model,
             dangerously_skip_permissions=config.dangerously_skip_permissions,

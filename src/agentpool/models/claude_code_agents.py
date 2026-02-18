@@ -21,6 +21,8 @@ from agentpool_config.nodes import BaseAgentConfig
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from clawd_code_sdk.models import AgentDefinition as CCAgentDefinition
+
     from agentpool.agents.claude_code_agent import ClaudeCodeAgent
     from agentpool.common_types import AnyEventHandlerType
     from agentpool.delegation import AgentPool
@@ -356,3 +358,9 @@ class ClaudeCodeAgentConfig(BaseAgentConfig):
             providers.append(StaticResourceProvider(name="tools", tools=static_tools))
 
         return providers
+
+    def get_subagent_configs(self) -> dict[str, CCAgentDefinition]:
+        from clawd_code_sdk.models import AgentDefinition as CCAgentDefinition
+
+        subagents = self.builtin_subagents or {}
+        return {k: CCAgentDefinition(**v.model_dump()) for k, v in subagents.items()}
