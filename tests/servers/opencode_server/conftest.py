@@ -1,7 +1,8 @@
 """Test fixtures for OpenCode server tests.
 
 Provides fixtures for testing the OpenCode server API, including:
-- Mock agent pools and agents
+- Real lightweight components where possible (StorageManager, FileOpsTracker, TodoTracker)
+- Mock agent and pool (require heavy infrastructure like model clients, MCP servers)
 - Server state management
 - FastAPI test client setup
 - Temporary directory management for git-enabled tests
@@ -20,12 +21,16 @@ from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 import pytest
 
+from agentpool.models.manifest import AgentsManifest
+from agentpool.storage import StorageManager
+from agentpool.utils.streams import FileOpsTracker, TodoTracker
 from agentpool.utils.time_utils import now_ms
 from agentpool_server.opencode_server.dependencies import get_state
 from agentpool_server.opencode_server.models import Session
 from agentpool_server.opencode_server.models.common import TimeCreatedUpdated
 from agentpool_server.opencode_server.routes import file_router, session_router
 from agentpool_server.opencode_server.state import ServerState
+from agentpool_storage.memory_provider.provider import MemoryStorageProvider
 
 
 if TYPE_CHECKING:
@@ -78,65 +83,62 @@ def tmp_git_dir(tmp_project_dir: Path) -> Path:
 
 
 # =============================================================================
-# Mock Agent Pool Fixtures
+# Real Lightweight Component Fixtures
 # =============================================================================
 
 
 @pytest.fixture
-def mock_storage() -> Mock:
-    """Create a mock storage backend with session CRUD methods."""
-    storage = AsyncMock()
-    storage.filter_messages = AsyncMock(return_value=[])
-    storage.save_session = AsyncMock(return_value=None)
-    storage.load_session = AsyncMock(return_value=None)
-    storage.delete_session = AsyncMock(return_value=True)
-    storage.list_session_ids = AsyncMock(return_value=[])
-    return storage
+def storage_manager() -> StorageManager:
+    """Create a real StorageManager backed by an in-memory provider.
+
+    Uses MemoryStorageProvider so session CRUD, message storage, etc.
+    all work without any external dependencies or I/O.
+    """
+    provider = MemoryStorageProvider()
+    return StorageManager(providers=[provider])
 
 
 @pytest.fixture
-def mock_file_ops() -> Mock:
-    """Create a mock file operations tracker."""
-    file_ops = Mock()
-    file_ops.changes = []
-    file_ops.reverted_changes = []
-    file_ops.get_changes_since_message = Mock(return_value=[])
-    file_ops.get_revert_operations = Mock(return_value=[])
-    file_ops.get_unrevert_operations = Mock(return_value=[])
-    file_ops.remove_changes_since_message = Mock()
-    file_ops.restore_reverted_changes = Mock()
-    return file_ops
+def file_ops() -> FileOpsTracker:
+    """Create a real FileOpsTracker."""
+    return FileOpsTracker()
 
 
 @pytest.fixture
-def mock_todos() -> Mock:
-    """Create a mock todo tracker."""
-    todos = Mock()
-    todos.entries = []
-    return todos
+def todos() -> TodoTracker:
+    """Create a real TodoTracker."""
+    return TodoTracker()
 
 
 @pytest.fixture
-def mock_manifest() -> Mock:
-    """Create a mock manifest."""
-    manifest = Mock()
-    manifest.config_file_path = "/tmp/test-pool"
-    return manifest
+def manifest() -> AgentsManifest:
+    """Create a real AgentsManifest with minimal config."""
+    return AgentsManifest(config_file_path="/tmp/test-pool")
+
+
+# =============================================================================
+# Mock Fixtures (only for components requiring heavy infrastructure)
+# =============================================================================
 
 
 @pytest.fixture
 def mock_pool(
-    mock_storage: Mock,
-    mock_file_ops: Mock,
-    mock_todos: Mock,
-    mock_manifest: Mock,
+    storage_manager: StorageManager,
+    file_ops: FileOpsTracker,
+    todos: TodoTracker,
+    manifest: AgentsManifest,
 ) -> Mock:
-    """Create a mock agent pool with all required components."""
+    """Create a mock agent pool wired to real lightweight components.
+
+    The pool itself must be mocked because a real AgentPool spawns agents,
+    MCP servers, and other heavy infrastructure. But its attributes are real
+    objects so tests exercise actual storage, file-ops, and todo logic.
+    """
     pool = Mock()
-    pool.storage = mock_storage
-    pool.file_ops = mock_file_ops
-    pool.todos = mock_todos
-    pool.manifest = mock_manifest
+    pool.storage = storage_manager
+    pool.file_ops = file_ops
+    pool.todos = todos
+    pool.manifest = manifest
     return pool
 
 
@@ -160,16 +162,21 @@ def mock_env(tmp_project_dir: Path) -> Mock:
 
 
 @pytest.fixture
-def mock_agent(mock_env: Mock, mock_pool: Mock, mock_storage: Mock) -> Mock:
-    """Create a mock agent for testing."""
+def mock_agent(mock_env: Mock, mock_pool: Mock, storage_manager: StorageManager) -> Mock:
+    """Create a mock agent for testing.
+
+    The agent must be mocked because a real agent requires model clients,
+    tool systems, etc. But its storage attribute is the real StorageManager
+    so state.storage (which reads agent.storage) works end-to-end.
+    """
     agent = Mock()
     agent.name = "test-agent"
     agent.env = mock_env
     agent._input_provider = None
     agent.run = AsyncMock(return_value=Mock(data="test response"))
-    agent.agent_pool = mock_pool  # Agent carries its pool
-    # Storage manager (accessed via state.storage -> agent.storage)
-    agent.storage = mock_storage
+    agent.agent_pool = mock_pool
+    # Real storage manager (accessed via state.storage -> agent.storage)
+    agent.storage = storage_manager
     # Session management methods (used by session routes)
     agent.list_sessions = AsyncMock(return_value=[])
     agent.load_session = AsyncMock(return_value=None)
