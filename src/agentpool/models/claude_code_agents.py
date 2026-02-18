@@ -71,6 +71,21 @@ class AgentDefinition(Schema):
     model: Literal["sonnet", "opus", "haiku", "inherit"] | None = None
     """Model to use for the agent."""
 
+    memory: Literal["user", "project", "local"] | None = None
+    """Memory type for the agent."""
+
+    disallowed_tools: list[str] | None = None
+    """List of tools the agent cannot use."""
+
+    skills: list[str] | None = None
+    """List of skills the agent can use."""
+
+    max_turns: int | None = None
+    """Maximum number of turns the agent can take."""
+
+    # mcp_servers: list[AgentMcpServerSpec] | dict[str, ExternalMcpServerConfig] | None = None
+    # critical_system_reminder_experimental: str | None = None
+
 
 class ClaudeCodeAgentConfig(BaseAgentConfig):
     """Configuration for Claude Code agents.
