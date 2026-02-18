@@ -136,11 +136,7 @@ class AuggieACPAgentConfig(BaseACPAgentConfig):
     )
     """Cache directory (default: ~/.augment)."""
 
-    retry_timeout: int | None = Field(
-        default=None,
-        title="Retry Timeout",
-        examples=[30, 60],
-    )
+    retry_timeout: int | None = Field(default=None, title="Retry Timeout", examples=[30, 60])
     """Timeout for rate-limit retries (seconds)."""
 
     allow_indexing: bool = Field(default=False, title="Allow Indexing")
