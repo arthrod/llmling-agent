@@ -14,6 +14,10 @@ from agentpool.resource_providers import StaticResourceProvider
 from agentpool_config import (
     AnyToolConfig,  # noqa: TC001
     BaseToolConfig,
+    MCPServerConfig,
+    SSEMCPServerConfig,
+    StdioMCPServerConfig,
+    StreamableHTTPMCPServerConfig,
 )
 from agentpool_config.nodes import BaseAgentConfig
 
@@ -83,7 +87,9 @@ class AgentDefinition(Schema):
     max_turns: int | None = None
     """Maximum number of turns the agent can take."""
 
-    # mcp_servers: list[AgentMcpServerSpec] | dict[str, ExternalMcpServerConfig] | None = None
+    mcp_servers: dict[str, MCPServerConfig] | None = None
+    """Configuration for MCP servers."""
+
     # critical_system_reminder_experimental: str | None = None
 
 
@@ -375,7 +381,29 @@ class ClaudeCodeAgentConfig(BaseAgentConfig):
         return providers
 
     def get_subagent_configs(self) -> dict[str, CCAgentDefinition]:
-        from clawd_code_sdk.models import AgentDefinition as CCAgentDefinition
+        from clawd_code_sdk.models import (
+            AgentDefinition as CCAgentDefinition,
+            McpHttpServerConfig,
+            McpSSEServerConfig,
+            McpStdioServerConfig,
+        )
 
-        subagents = self.builtin_subagents or {}
-        return {k: CCAgentDefinition(**v.model_dump()) for k, v in subagents.items()}
+        dct: dict[str, CCAgentDefinition] = {}
+
+        for k, v in (self.builtin_subagents or {}).items():
+            mcp_dct = {}
+            for server_name, server_config in (v.mcp_servers or {}).items():
+                match server_config:
+                    case StdioMCPServerConfig(command=command, args=args):
+                        mcp_dct[server_name] = McpStdioServerConfig(
+                            type="stdio", command=command, args=args
+                        )
+                    case StreamableHTTPMCPServerConfig(url=url):
+                        mcp_dct[server_name] = McpHttpServerConfig(type="http", url=str(url))
+                    case SSEMCPServerConfig(url=url):
+                        mcp_dct[server_name] = McpSSEServerConfig(type="sse", url=str(url))
+            dumped = v.model_dump()
+            dumped["mcp_servers"] = mcp_dct
+            dct[k] = CCAgentDefinition(**dumped)
+
+        return dct
