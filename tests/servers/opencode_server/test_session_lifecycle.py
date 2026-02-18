@@ -12,8 +12,10 @@ Note: The OpenCode API uses camelCase field names with "ID" suffix:
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from agentpool.sessions.models import SessionData
 from agentpool_server.opencode_server.models import SessionStatus
 from agentpool_server.opencode_server.models.events import SessionCreatedEvent
 
@@ -222,10 +224,6 @@ class TestSessionCRUD:
         server_state: ServerState,
     ):
         """Listing sessions should return all created sessions."""
-        from datetime import UTC, datetime
-
-        from agentpool.sessions.models import SessionData
-
         # Create multiple sessions
         session_ids = []
         for i in range(3):
