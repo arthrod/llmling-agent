@@ -464,7 +464,9 @@ class ToolManagerBridge:
                     data=self._bridge._current_deps,
                     input_provider=self._bridge._current_input_provider,
                 )
-                ctx = replace(ctx, tool_name=self._tool.name, tool_call_id=tc_id, tool_input=args)
+                ctx = replace(
+                    ctx, tool_name=self._tool.name, tool_call_id=tc_id, tool_input=args.copy()
+                )
                 # Invoke with context - copy args since invoke_tool_with_context
                 # modifies kwargs in-place to inject context parameters
                 result = await self._bridge.invoke_tool_with_context(self._tool, ctx, args)
