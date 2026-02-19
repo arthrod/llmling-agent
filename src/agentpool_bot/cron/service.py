@@ -9,19 +9,14 @@ import uuid
 
 from agentpool.log import get_logger
 from agentpool.utils.time_utils import now_ms
-from agentpool_bot.cron.types import (
-    CronJob,
-    CronJobState,
-    CronPayload,
-    CronStore,
-)
+from agentpool_bot.cron.cron_types import CronJob, CronJobState, CronPayload, CronStore
 
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from pathlib import Path
 
-    from agentpool_bot.cron.types import CronSchedule
+    from agentpool_bot.cron.cron_types import CronSchedule
 
 
 logger = get_logger(__name__)

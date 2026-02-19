@@ -48,10 +48,8 @@ class SlackChannel(BaseChannel):
             return
 
         self._running = True
-
         self._web_client = AsyncWebClient(token=self.config.bot_token)
         self._socket_client = SocketModeClient(self.config.app_token, web_client=self._web_client)
-
         self._socket_client.socket_mode_request_listeners.append(self._on_socket_request)  # type: ignore[arg-type]
 
         # Resolve bot user ID for mention handling

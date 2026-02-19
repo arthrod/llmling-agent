@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from agentpool_bot.cron.service import CronService
-from agentpool_bot.cron.types import (
+from agentpool_bot.cron.cron_types import (
     CronJob,
     CronJobState,
     CronPayload,
