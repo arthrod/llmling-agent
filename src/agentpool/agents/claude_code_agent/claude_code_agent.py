@@ -561,7 +561,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
     async def _can_use_tool(
         self,
         tool_name: str,
-        input_data: ToolInput,
+        input_data: ToolInput | dict[str, Any],
         context: ToolPermissionContext,
     ) -> PermissionResult:
         """Handle tool permission requests.
