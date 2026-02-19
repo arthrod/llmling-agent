@@ -948,6 +948,44 @@ class MCPDiscoveryToolsetConfig(BaseToolsetConfig):
         )
 
 
+class CronToolsetConfig(BaseToolsetConfig):
+    """Configuration for cron scheduling toolset.
+
+    Gives agents the ability to schedule, list, and remove recurring or
+    one-shot jobs at runtime. Jobs are persisted to a JSON file.
+
+    Requires the ``bot`` extra: ``pip install agentpool[bot]``
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "x-icon": "octicon:clock-16",
+            "x-doc-title": "Cron Toolset",
+        }
+    )
+
+    type: Literal["cron"] = Field("cron", init=False)
+    """Cron scheduling toolset."""
+
+    store_path: str = Field(
+        default="~/.agentpool/cron_jobs.json",
+        title="Job store path",
+        examples=["~/.agentpool/cron_jobs.json", "/tmp/cron.json"],
+    )
+    """Path to the JSON file where scheduled jobs are persisted."""
+
+    def get_provider(self) -> ResourceProvider:
+        """Create cron tools provider."""
+        from pathlib import Path
+
+        from agentpool_bot.cron.service import CronService
+        from agentpool_toolsets.cron import CronTools
+
+        resolved = Path(self.store_path).expanduser()
+        service = CronService(store_path=resolved)
+        return CronTools(service=service, name=self.namespace or "cron")
+
+
 ToolsetConfig = Annotated[
     OpenAPIToolsetConfig
     | EntryPointToolsetConfig
@@ -969,6 +1007,7 @@ ToolsetConfig = Annotated[
     | PlanToolsetConfig
     | DebugToolsetConfig
     | MCPDiscoveryToolsetConfig
+    | CronToolsetConfig
     | CustomToolsetConfig,
     Field(discriminator="type"),
 ]
