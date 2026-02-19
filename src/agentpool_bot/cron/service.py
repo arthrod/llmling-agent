@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-import time
+from datetime import datetime
 from typing import TYPE_CHECKING
 import uuid
 
 from agentpool.log import get_logger
+from agentpool.utils.time_utils import now_ms
 from agentpool_bot.cron.types import (
     CronJob,
     CronJobState,
@@ -18,18 +19,12 @@ from agentpool_bot.cron.types import (
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
-    from datetime import datetime
     from pathlib import Path
 
     from agentpool_bot.cron.types import CronSchedule
 
 
 logger = get_logger(__name__)
-
-
-def _now_ms() -> int:
-    """Current time in milliseconds since epoch."""
-    return int(time.time() * 1000)
 
 
 def _compute_next_run(schedule: CronSchedule, now_ms: int) -> int | None:  # noqa: PLR0911
@@ -42,40 +37,11 @@ def _compute_next_run(schedule: CronSchedule, now_ms: int) -> int | None:  # noq
     Returns:
         Next run timestamp in milliseconds, or None if no future run.
     """
-    from datetime import datetime
-
     match schedule.kind:
         case "at":
             if schedule.at_ms is not None and schedule.at_ms > now_ms:
                 return schedule.at_ms
             return None
-
-        case "every":
-            if schedule.every_ms is None or schedule.every_ms <= 0:
-                return None
-            return now_ms + schedule.every_ms
-
-        case "cron":
-            if not schedule.expr:
-                return None
-            try:
-                from zoneinfo import ZoneInfo
-
-                from croniter import croniter
-
-                base_time = now_ms / 1000
-                tz = ZoneInfo(schedule.tz) if schedule.tz else datetime.now().astimezone().tzinfo
-                base_dt = datetime.fromtimestamp(base_time, tz=tz)
-                cron = croniter(schedule.expr, base_dt)
-                next_dt: datetime = cron.get_next(datetime)
-                return int(next_dt.timestamp() * 1000)
-            except Exception:
-                logger.exception(
-                    "Failed to compute next cron run",
-                    expr=schedule.expr,
-                    tz=schedule.tz,
-                )
-                return None
 
         case "every":
             if schedule.every_ms is None or schedule.every_ms <= 0:
@@ -178,7 +144,7 @@ class CronService:
         """Recompute next run times for all enabled jobs."""
         if self._store is None:
             return
-        now = _now_ms()
+        now = now_ms()
         for job in self._store.jobs:
             if job.enabled:
                 job.state.next_run_at_ms = _compute_next_run(job.schedule, now)
@@ -203,7 +169,7 @@ class CronService:
         if next_wake is None or not self._running:
             return
 
-        delay_s = max(0, (next_wake - _now_ms())) / 1000
+        delay_s = max(0, (next_wake - now_ms())) / 1000
 
         async def _tick() -> None:
             await asyncio.sleep(delay_s)
@@ -217,7 +183,7 @@ class CronService:
         if self._store is None:
             return
 
-        now = _now_ms()
+        now = now_ms()
         due_jobs = [
             j
             for j in self._store.jobs
@@ -232,7 +198,7 @@ class CronService:
 
     async def _execute_job(self, job: CronJob) -> None:
         """Execute a single job and update its state."""
-        start_ms = _now_ms()
+        start_ms = now_ms()
         logger.info("Cron: executing job", job_name=job.name, job_id=job.id)
 
         try:
@@ -247,7 +213,7 @@ class CronService:
             job.state.last_error = str(exc)
 
         job.state.last_run_at_ms = start_ms
-        job.updated_at_ms = _now_ms()
+        job.updated_at_ms = now_ms()
 
         # Handle one-shot ("at") jobs
         if job.schedule.kind == "at":
@@ -258,7 +224,7 @@ class CronService:
                 job.enabled = False
                 job.state.next_run_at_ms = None
         else:
-            job.state.next_run_at_ms = _compute_next_run(job.schedule, _now_ms())
+            job.state.next_run_at_ms = _compute_next_run(job.schedule, now_ms())
 
     # ── Public API ───────────────────────────────────────────────────
 
@@ -298,7 +264,7 @@ class CronService:
             The newly created job.
         """
         store = self._load_store()
-        now = _now_ms()
+        now = now_ms()
 
         job = CronJob(
             id=str(uuid.uuid4())[:8],
@@ -357,9 +323,9 @@ class CronService:
         for job in store.jobs:
             if job.id == job_id:
                 job.enabled = enabled
-                job.updated_at_ms = _now_ms()
+                job.updated_at_ms = now_ms()
                 if enabled:
-                    job.state.next_run_at_ms = _compute_next_run(job.schedule, _now_ms())
+                    job.state.next_run_at_ms = _compute_next_run(job.schedule, now_ms())
                 else:
                     job.state.next_run_at_ms = None
                 self._save_store()
