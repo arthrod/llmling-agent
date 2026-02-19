@@ -1,0 +1,142 @@
+"""Configuration models for agentpool_bot channels."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
+
+
+if TYPE_CHECKING:
+    from agentpool_bot.bus import MessageBus
+    from agentpool_bot.channels.discord import DiscordChannel
+    from agentpool_bot.channels.email import EmailChannel
+    from agentpool_bot.channels.slack import SlackChannel
+    from agentpool_bot.channels.telegram import TelegramChannel
+    from agentpool_bot.channels.whatsapp import WhatsAppChannel
+
+
+class _Base(BaseModel):
+    """Base model that accepts both camelCase and snake_case keys."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class WhatsAppConfig(_Base):
+    """WhatsApp channel configuration."""
+
+    enabled: bool = False
+    bridge_url: str = "ws://localhost:3001"
+    bridge_token: str = ""
+    allow_from: list[str] = Field(default_factory=list)
+
+    def get_provider(self, bus: MessageBus) -> WhatsAppChannel:
+        from agentpool_bot.channels.whatsapp import WhatsAppChannel
+
+        return WhatsAppChannel(self, bus)
+
+
+class TelegramConfig(_Base):
+    """Telegram channel configuration."""
+
+    enabled: bool = False
+    token: str = ""
+    allow_from: list[str] = Field(default_factory=list)
+    proxy: str | None = None
+
+    def get_provider(self, bus: MessageBus) -> TelegramChannel:
+        from agentpool_bot.channels.telegram import TelegramChannel
+
+        return TelegramChannel(self, bus)
+
+
+class DiscordConfig(_Base):
+    """Discord channel configuration."""
+
+    enabled: bool = False
+    token: str = ""
+    allow_from: list[str] = Field(default_factory=list)
+    gateway_url: str = "wss://gateway.discord.gg/?v=10&encoding=json"
+    intents: int = 37377  # GUILDS + GUILD_MESSAGES + DIRECT_MESSAGES + MESSAGE_CONTENT
+
+    def get_provider(self, bus: MessageBus) -> DiscordChannel:
+        from agentpool_bot.channels.discord import DiscordChannel
+
+        return DiscordChannel(self, bus)
+
+
+class EmailConfig(_Base):
+    """Email channel configuration (IMAP inbound + SMTP outbound)."""
+
+    enabled: bool = False
+    consent_granted: bool = False
+
+    # IMAP (receive)
+    imap_host: str = ""
+    imap_port: int = 993
+    imap_username: str = ""
+    imap_password: str = ""
+    imap_mailbox: str = "INBOX"
+    imap_use_ssl: bool = True
+
+    # SMTP (send)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = True
+    smtp_use_ssl: bool = False
+    from_address: str = ""
+
+    # Behavior
+    auto_reply_enabled: bool = True
+    poll_interval_seconds: int = 30
+    mark_seen: bool = True
+    max_body_chars: int = 12000
+    subject_prefix: str = "Re: "
+    allow_from: list[str] = Field(default_factory=list)
+
+    def get_provider(self, bus: MessageBus) -> EmailChannel:
+        from agentpool_bot.channels.email import EmailChannel
+
+        return EmailChannel(self, bus)
+
+
+class SlackDMConfig(_Base):
+    """Slack DM policy configuration."""
+
+    enabled: bool = True
+    policy: str = "open"  # "open" or "allowlist"
+    allow_from: list[str] = Field(default_factory=list)
+
+
+class SlackConfig(_Base):
+    """Slack channel configuration."""
+
+    enabled: bool = False
+    mode: str = "socket"
+    webhook_path: str = "/slack/events"
+    bot_token: str = ""
+    app_token: str = ""
+    user_token_read_only: bool = True
+    reply_in_thread: bool = True
+    react_emoji: str = "eyes"
+    group_policy: str = "mention"
+    group_allow_from: list[str] = Field(default_factory=list)
+    dm: SlackDMConfig = Field(default_factory=SlackDMConfig)
+
+    def get_provider(self, bus: MessageBus) -> SlackChannel:
+        from agentpool_bot.channels.slack import SlackChannel
+
+        return SlackChannel(self, bus)
+
+
+class ChannelsConfig(_Base):
+    """Configuration for all chat channels."""
+
+    whatsapp: WhatsAppConfig = Field(default_factory=WhatsAppConfig)
+    telegram: TelegramConfig = Field(default_factory=TelegramConfig)
+    discord: DiscordConfig = Field(default_factory=DiscordConfig)
+    email: EmailConfig = Field(default_factory=EmailConfig)
+    slack: SlackConfig = Field(default_factory=SlackConfig)
