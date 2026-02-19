@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING, Self
 
 from agentpool.log import get_logger
@@ -10,11 +11,10 @@ from agentpool.resource_providers import ResourceProvider
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from types import TracebackType
 
     from agentpool.tools.base import Tool
+    from agentpool_bot.cron.cron_types import CronSchedule
     from agentpool_bot.cron.service import CronService
-    from agentpool_bot.cron.types import CronSchedule
 
 
 logger = get_logger(__name__)
@@ -46,12 +46,7 @@ class CronTools(ResourceProvider):
         await self.service.start()
         return self
 
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> None:
+    async def __aexit__(self, *args: object) -> None:
         """Stop the cron service."""
         self.service.stop()
 
@@ -92,7 +87,7 @@ class CronTools(ResourceProvider):
         Returns:
             Confirmation with the job id.
         """
-        from agentpool_bot.cron.types import CronSchedule
+        from agentpool_bot.cron.cron_types import CronSchedule
 
         if tz and not cron_expr:
             return "Error: tz can only be used with cron_expr"
@@ -112,8 +107,6 @@ class CronTools(ResourceProvider):
         elif cron_expr is not None:
             schedule = CronSchedule(kind="cron", expr=cron_expr, tz=tz)
         elif at is not None:
-            from datetime import datetime
-
             try:
                 dt = datetime.fromisoformat(at)
             except ValueError:

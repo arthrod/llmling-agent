@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from dataclasses import dataclass, field
 import json
 import logging
 from typing import TYPE_CHECKING, Any
@@ -31,36 +32,29 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+@dataclass(kw_only=True)
 class ACPWebSocketServer:
     """WebSocket server that bridges to a stdio ACP agent."""
 
-    def __init__(
-        self,
-        command: str,
-        args: list[str] | None = None,
-        *,
-        host: str = "localhost",
-        port: int = 8765,
-        env: Mapping[str, str] | None = None,
-        cwd: str | Path | None = None,
-    ) -> None:
-        """Initialize the WebSocket server.
+    command: str
+    """command to spawn the WebSocket server."""
 
-        Args:
-            command: Command to spawn the ACP agent.
-            args: Arguments for the command.
-            host: Host to bind the WebSocket server to.
-            port: Port for the WebSocket server.
-            env: Environment variables for the subprocess.
-            cwd: Working directory for the subprocess.
-        """
-        self.command = command
-        self.args = args or []
-        self.host = host
-        self.port = port
-        self.env = env
-        self.cwd = cwd
+    args: list[str] = field(default_factory=list)
+    """arguments for the command."""
 
+    host: str = "localhost"
+    """host to bind the WebSocket server to."""
+
+    port: int = 8765
+    """port for the WebSocket server."""
+
+    env: Mapping[str, str] | None = None
+    """environment variables for the subprocess."""
+
+    cwd: str | Path | None = None
+    """working directory for the subprocess."""
+
+    def __post_init__(self):
         self._process: Process | None = None
         self._reader: ByteReceiveStream | None = None
         self._writer: ByteSendStream | None = None
@@ -130,11 +124,8 @@ class ACPWebSocketServer:
                     await self._send_to_agent(message)
                 except anyenv.JsonLoadError:
                     logger.exception("Invalid JSON from WebSocket")
-                    error_response = {
-                        "jsonrpc": "2.0",
-                        "id": None,
-                        "error": {"code": -32700, "message": "Parse error"},
-                    }
+                    error = ({"code": -32700, "message": "Parse error"},)
+                    error_response = {"jsonrpc": "2.0", "id": None, "error": error}
                     await websocket.send(json.dumps(error_response))
         except websockets.exceptions.ConnectionClosed:
             logger.info("WebSocket client disconnected")

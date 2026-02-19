@@ -36,7 +36,6 @@ from acp.schema import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from types import TracebackType
 
     from anyio.abc import ByteReceiveStream, ByteSendStream
 
@@ -193,12 +192,7 @@ class ClientSideConnection(Agent):
     async def __aenter__(self) -> Self:
         return self
 
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> None:
+    async def __aexit__(self, *args: object) -> None:
         await self.close()
 
 

@@ -29,7 +29,6 @@ from acp.task import (
     NotificationRunner,
     RequestRunner,
     RpcTask,
-    RpcTaskKind,
     TaskSupervisor,
 )
 
@@ -178,11 +177,9 @@ class Connection:
     async def _process_message(self, message: dict[str, Any]) -> None:
         method = message.get("method")
         has_id = "id" in message
-        if method is not None and has_id:
-            await self._queue.publish(RpcTask(RpcTaskKind.REQUEST, message))
-            return
-        if method is not None and not has_id:
-            await self._queue.publish(RpcTask(RpcTaskKind.NOTIFICATION, message))
+        if method is not None:
+            task = RpcTask("request" if has_id else "notification", message)
+            await self._queue.publish(task)
             return
         if has_id:
             await self._handle_response(message)

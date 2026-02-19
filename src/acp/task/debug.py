@@ -157,14 +157,12 @@ class DebuggingMessageStateStore(InMemoryMessageStateStore):
         """Write debug entry to file if configured."""
         if not self._debug_file:
             return
-
+        # Convert to dict and filter out None values for cleaner output
+        data = {k: v for k, v in asdict(entry).items() if v is not None}
         try:
-            # Convert to dict and filter out None values for cleaner output
-            data = {k: v for k, v in asdict(entry).items() if v is not None}
             # Write as JSONL (one JSON object per line)
             with self._debug_file.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(data, separators=(",", ":")) + "\n")
-
         except Exception:
             # Don't let debug logging break the connection
             logging.exception("Failed to write debug entry")

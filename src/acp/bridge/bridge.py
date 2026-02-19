@@ -96,14 +96,9 @@ class ACPBridge:
         is_notification = request_id is None
 
         if method is None:
-            return JSONResponse(
-                {
-                    "jsonrpc": "2.0",
-                    "id": request_id,
-                    "error": {"code": -32600, "message": "Invalid Request"},
-                },
-                status_code=400,
-            )
+            error = {"code": -32600, "message": "Invalid Request"}
+            response = {"jsonrpc": "2.0", "id": request_id, "error": error}
+            return JSONResponse(response, status_code=400)
 
         try:
             result = await self._dispatch_to_agent(method, params, is_notification)
@@ -199,29 +194,23 @@ class ACPBridge:
 
         middleware: list[Middleware] = []
         if self.settings.allow_origins:
-            middleware.append(
-                Middleware(
-                    CORSMiddleware,  # ty: ignore[invalid-argument-type]
-                    allow_origins=self.settings.allow_origins,
-                    allow_methods=["*"],
-                    allow_headers=["*"],
-                )
+            mw = Middleware(
+                CORSMiddleware,  # ty: ignore[invalid-argument-type]
+                allow_origins=self.settings.allow_origins,
+                allow_methods=["*"],
+                allow_headers=["*"],
             )
-
-        return Starlette(
-            debug=(self.settings.log_level == "DEBUG"),
-            routes=routes,
-            middleware=middleware,
-        )
+            middleware.append(mw)
+        is_debug = self.settings.log_level == "DEBUG"
+        return Starlette(debug=is_debug, routes=routes, middleware=middleware)
 
     async def run(self) -> None:
         """Run the bridge server."""
         async with contextlib.AsyncExitStack() as stack:
             # Spawn the stdio agent subprocess
             logger.info("Spawning ACP agent: %s %s", self.command, " ".join(self.args))
-            reader, writer, process = await stack.enter_async_context(
-                spawn_stdio_transport(self.command, *self.args, env=self.env, cwd=self.cwd)
-            )
+            coro = spawn_stdio_transport(self.command, *self.args, env=self.env, cwd=self.cwd)
+            reader, writer, process = await stack.enter_async_context(coro)
             self._process = process
 
             # Create client connection to the agent
@@ -230,8 +219,7 @@ class ACPBridge:
 
             self._connection = ClientSideConnection(client_factory, writer, reader)
             stack.push_async_callback(self._connection.close)
-            # Create and run the HTTP server
-            app = self._create_app()
+            app = self._create_app()  # Create and run the HTTP server
             config = uvicorn.Config(
                 app,
                 host=self.settings.host,
