@@ -915,7 +915,9 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             # Capture SDK session ID from init message
             stream = client.receive_response()
             first_msg = await anext(stream)
-            assert isinstance(first_msg, SystemMessage | RateLimitMessage)
+            assert isinstance(first_msg, SystemMessage | RateLimitMessage), (
+                f"invalid message type {type(first_msg)}"
+            )
             self._sdk_session_id = first_msg.session_id
             # Persist SDK session ID to storage for cross-referencing
             if self.storage and self.session_id:
