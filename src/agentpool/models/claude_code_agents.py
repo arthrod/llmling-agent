@@ -25,7 +25,10 @@ from agentpool_config.nodes import BaseAgentConfig
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from clawd_code_sdk.models import AgentDefinition as CCAgentDefinition
+    from clawd_code_sdk.models import (
+        AgentDefinition as CCAgentDefinition,
+        McpServerConfig,
+    )
 
     from agentpool.agents.claude_code_agent import ClaudeCodeAgent
     from agentpool.common_types import AnyEventHandlerType
@@ -391,7 +394,7 @@ class ClaudeCodeAgentConfig(BaseAgentConfig):
         dct: dict[str, CCAgentDefinition] = {}
 
         for k, v in (self.builtin_subagents or {}).items():
-            mcp_dct = {}
+            mcp_dct: dict[str, McpServerConfig] = {}
             for server_name, server_config in (v.mcp_servers or {}).items():
                 match server_config:
                     case StdioMCPServerConfig(command=command, args=args):

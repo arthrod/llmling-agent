@@ -23,7 +23,8 @@ from agentpool.utils.inspection import execute
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from fastmcp.prompts.prompt import FunctionPrompt, Prompt as FastMCPPrompt
+    from fastmcp.prompts.function_prompt import FunctionPrompt
+    from fastmcp.prompts.prompt import Prompt as FastMCPPrompt
     from mcp.types import Prompt as MCPPrompt, PromptArgument
     from pydantic_ai import ModelRequestPart
     from slashed import CommandContext
@@ -275,7 +276,7 @@ class DynamicPrompt(BasePrompt):
         ]
 
     def to_fastmcp_prompt(self) -> FunctionPrompt:
-        from fastmcp.prompts.prompt import FunctionPrompt
+        from fastmcp.prompts.function_prompt import FunctionPrompt
 
         return FunctionPrompt.from_function(self.fn, title=self.title, description=self.description)
 
