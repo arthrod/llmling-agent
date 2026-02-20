@@ -10,13 +10,14 @@ import base64
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
+from pydantic import TypeAdapter
 from pydantic_ai import (
     BinaryContent,
     ModelRequest,
     ModelResponse,
     RequestUsage,
     RunUsage,
-    TextPart,
+    TextPart as PydanticTextPart,
     ThinkingPart,
     ToolCallPart,
     ToolReturnPart,
@@ -27,6 +28,19 @@ from agentpool.log import get_logger
 from agentpool.messaging import ChatMessage, TokenCost
 from agentpool.utils.pydantic_ai_helpers import to_user_content
 from agentpool.utils.time_utils import ms_to_datetime
+from agentpool_server.opencode_server.models.message import (
+    AssistantMessage,
+    MessageInfo,
+    UserMessage,
+)
+from agentpool_server.opencode_server.models.parts import (
+    FilePart,
+    Part,
+    ReasoningPart,
+    TextPart,
+    ToolPart,
+    ToolStateCompleted,
+)
 
 
 if TYPE_CHECKING:
@@ -37,28 +51,58 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-
-# ── Row type aliases ──────────────────────────────────────────────────────────
-# These match the SQLite column layout for type-safe row access.
-
-# session row: (id, project_id, parent_id, slug, directory, title, version,
-#   share_url, summary_additions, summary_deletions, summary_files,
-#   summary_diffs, revert, permission, time_created, time_updated,
-#   time_compacting, time_archived)
-# We access by column name via sqlite3.Row
-
-# message row: (id, session_id, time_created, time_updated, data)
-# part row: (id, message_id, session_id, time_created, time_updated, data)
+_message_info_adapter: TypeAdapter[MessageInfo] = TypeAdapter(MessageInfo)
+_part_adapter: TypeAdapter[Part] = TypeAdapter(Part)
 
 
-def extract_text_content(parts: list[dict[str, Any]]) -> str:
-    """Extract text content from part data dicts for display.
+def parse_message_info(data: dict[str, Any], *, message_id: str, session_id: str) -> MessageInfo:
+    """Parse a message JSON data dict into a typed MessageInfo model.
+
+    Injects the DB column fields (id, sessionID) into the data dict before
+    validation, matching how OpenCode itself reconstructs messages from DB rows.
+
+    Args:
+        data: The JSON 'data' field from the message table
+        message_id: Message ID from the DB id column
+        session_id: Session ID from the DB session_id column
+
+    Returns:
+        Validated UserMessage or AssistantMessage
+    """
+    data["id"] = message_id
+    data["sessionID"] = session_id
+    return _message_info_adapter.validate_python(data)
+
+
+def parse_part(data: dict[str, Any], *, part_id: str, message_id: str, session_id: str) -> Part:
+    """Parse a part JSON data dict into a typed Part model.
+
+    Injects the DB column fields (id, messageID, sessionID) into the data dict
+    before validation, matching how OpenCode itself reconstructs parts from DB rows.
+
+    Args:
+        data: The JSON 'data' field from the part table
+        part_id: Part ID from the DB id column
+        message_id: Message ID from the DB message_id column
+        session_id: Session ID from the DB session_id column
+
+    Returns:
+        Validated Part (TextPart, ToolPart, ReasoningPart, etc.)
+    """
+    data["id"] = part_id
+    data["messageID"] = message_id
+    data["sessionID"] = session_id
+    return _part_adapter.validate_python(data)
+
+
+def extract_text_content(parts: list[Part]) -> str:
+    """Extract text content from typed parts for display.
 
     Groups consecutive reasoning parts into a single <thinking> block
     and only wraps them if there are also non-reasoning parts present.
 
     Args:
-        parts: List of part data dicts (the JSON 'data' field from DB)
+        parts: List of typed Part models
 
     Returns:
         Combined text content from all text and reasoning parts
@@ -68,21 +112,17 @@ def extract_text_content(parts: list[dict[str, Any]]) -> str:
     has_text = False
 
     for part in parts:
-        part_type = part.get("type", "")
-        if part_type == "text":
-            text = part.get("text", "")
-            if text:
+        if isinstance(part, TextPart):
+            if part.text:
                 has_text = True
                 # Flush any accumulated reasoning before this text
                 if reasoning_segments:
                     combined = "\n".join(reasoning_segments)
                     text_segments.append(f"<thinking>\n{combined}\n</thinking>")
                     reasoning_segments.clear()
-                text_segments.append(text)
-        elif part_type == "reasoning":
-            text = part.get("text", "")
-            if text:
-                reasoning_segments.append(text)
+                text_segments.append(part.text)
+        elif isinstance(part, ReasoningPart) and part.text:
+            reasoning_segments.append(part.text)
 
     # Flush remaining reasoning
     if reasoning_segments:
@@ -97,20 +137,18 @@ def extract_text_content(parts: list[dict[str, Any]]) -> str:
 
 
 def _build_user_pydantic_messages(
-    parts: list[dict[str, Any]],
+    parts: list[Part],
     timestamp: datetime,
 ) -> list[ModelRequest | ModelResponse]:
     """Build ModelRequest from user message parts."""
     user_content: list[UserContent] = []
     for part in parts:
-        part_type = part.get("type", "")
-        if part_type == "text":
-            text = part.get("text", "")
-            if text:
-                user_content.append(text)
-        elif part_type == "file":
-            url = part.get("url", "")
-            mime = part.get("mime", "application/octet-stream")
+        if isinstance(part, TextPart):
+            if part.text:
+                user_content.append(part.text)
+        elif isinstance(part, FilePart):
+            url = part.url
+            mime = part.mime
             if url.startswith("data:") and ";base64," in url:
                 mime_part, b64_data = url.split(";base64,", 1)
                 media_type = mime_part.replace("data:", "")
@@ -126,64 +164,53 @@ def _build_user_pydantic_messages(
 
 
 def _build_assistant_pydantic_messages(
-    msg_data: dict[str, Any],
-    parts: list[dict[str, Any]],
+    msg: AssistantMessage,
+    parts: list[Part],
     timestamp: datetime,
 ) -> list[ModelRequest | ModelResponse]:
     """Build ModelResponse (+ optional ModelRequest for tool returns) from assistant parts."""
     result: list[ModelRequest | ModelResponse] = []
-    response_parts: list[TextPart | ToolCallPart | ThinkingPart] = []
+    response_parts: list[PydanticTextPart | ToolCallPart | ThinkingPart] = []
     tool_return_parts: list[ToolReturnPart] = []
 
-    tokens = msg_data.get("tokens", {})
-    cache = tokens.get("cache", {})
+    tokens = msg.tokens
+    cache = tokens.cache
     usage = RequestUsage(
-        input_tokens=tokens.get("input", 0),
-        output_tokens=tokens.get("output", 0),
-        cache_read_tokens=cache.get("read", 0),
-        cache_write_tokens=cache.get("write", 0),
+        input_tokens=tokens.input,
+        output_tokens=tokens.output,
+        cache_read_tokens=cache.read,
+        cache_write_tokens=cache.write,
     )
 
     for part in parts:
-        part_type = part.get("type", "")
-        if part_type == "text":
-            text = part.get("text", "")
-            if text:
-                response_parts.append(TextPart(content=text))
-        elif part_type == "reasoning":
-            text = part.get("text", "")
-            if text:
-                response_parts.append(ThinkingPart(content=text))
-        elif part_type == "tool":
-            call_id = part.get("callID", "")
-            tool = part.get("tool", "")
-            state = part.get("state", {})
-            status = state.get("status", "")
-            input_data = state.get("input", {})
-
+        if isinstance(part, TextPart):
+            if part.text:
+                response_parts.append(PydanticTextPart(content=part.text))
+        elif isinstance(part, ReasoningPart):
+            if part.text:
+                response_parts.append(ThinkingPart(content=part.text))
+        elif isinstance(part, ToolPart):
             tc_part = ToolCallPart(
-                tool_name=tool,
-                args=input_data,
-                tool_call_id=call_id,
+                tool_name=part.tool,
+                args=part.state.input,
+                tool_call_id=part.call_id,
             )
             response_parts.append(tc_part)
 
-            if status == "completed":
-                output = state.get("output", "")
-                if output:
-                    return_part = ToolReturnPart(
-                        tool_name=tool,
-                        content=output,
-                        tool_call_id=call_id,
-                        timestamp=timestamp,
-                    )
-                    tool_return_parts.append(return_part)
+            if isinstance(part.state, ToolStateCompleted) and part.state.output:
+                return_part = ToolReturnPart(
+                    tool_name=part.tool,
+                    content=part.state.output,
+                    tool_call_id=part.call_id,
+                    timestamp=timestamp,
+                )
+                tool_return_parts.append(return_part)
 
     if response_parts:
         model_response = ModelResponse(
             parts=response_parts,
             usage=usage,
-            model_name=msg_data.get("modelID", ""),
+            model_name=msg.model_id,
             timestamp=timestamp,
         )
         result.append(model_response)
@@ -195,11 +222,11 @@ def _build_assistant_pydantic_messages(
 
 
 def build_pydantic_messages(
-    msg_data: dict[str, Any],
-    parts: list[dict[str, Any]],
+    msg: MessageInfo,
+    parts: list[Part],
     timestamp: datetime,
 ) -> list[ModelRequest | ModelResponse]:
-    """Build pydantic-ai messages from OpenCode DB data.
+    """Build pydantic-ai messages from typed OpenCode models.
 
     In OpenCode's model, assistant messages contain both tool calls AND their
     results in the same message. We split these into:
@@ -207,74 +234,64 @@ def build_pydantic_messages(
     - ModelRequest with ToolReturnPart (the result)
 
     Args:
-        msg_data: The message 'data' JSON from the DB (contains role, tokens, etc.)
-        parts: List of part 'data' JSON dicts from the DB
+        msg: Typed UserMessage or AssistantMessage
+        parts: List of typed Part models
         timestamp: Message timestamp
 
     Returns:
         List of pydantic-ai messages (ModelRequest and/or ModelResponse)
     """
-    role = msg_data.get("role", "")
-    if role == "user":
+    if isinstance(msg, UserMessage):
         return _build_user_pydantic_messages(parts, timestamp)
-    return _build_assistant_pydantic_messages(msg_data, parts, timestamp)
+    return _build_assistant_pydantic_messages(msg, parts, timestamp)
 
 
 def to_chat_message(
     *,
-    message_id: str,
-    session_id: str,
-    msg_data: dict[str, Any],
-    parts: list[dict[str, Any]],
-    time_created: int,
+    msg: MessageInfo,
+    parts: list[Part],
 ) -> ChatMessage[str]:
-    """Convert OpenCode DB message + parts to ChatMessage.
+    """Convert typed OpenCode message + parts to ChatMessage.
 
     Args:
-        message_id: Message ID from DB
-        session_id: Session ID from DB
-        msg_data: The message 'data' JSON field
-        parts: List of part 'data' JSON dicts
-        time_created: Message creation time in ms
+        msg: Typed UserMessage or AssistantMessage
+        parts: List of typed Part models
 
     Returns:
         ChatMessage with content, pydantic messages, cost info etc.
     """
-    timestamp = ms_to_datetime(time_created)
+    timestamp = ms_to_datetime(msg.time.created)
     content = extract_text_content(parts)
-    pydantic_messages = build_pydantic_messages(msg_data, parts, timestamp)
+    pydantic_messages = build_pydantic_messages(msg, parts, timestamp)
 
-    role = msg_data.get("role", "user")
     cost_info = None
     provider_details: dict[str, Any] = {}
     parent_id: str | None = None
     model_name: str | None = None
-    agent_name: str | None = msg_data.get("agent")
+    agent_name: str | None = msg.agent if msg.agent != "default" else None
 
-    if role == "assistant":
-        tokens = msg_data.get("tokens", {})
-        cache = tokens.get("cache", {})
-        input_tokens = tokens.get("input", 0) + cache.get("read", 0)
-        output_tokens = tokens.get("output", 0)
+    if isinstance(msg, AssistantMessage):
+        tokens = msg.tokens
+        cache = tokens.cache
+        input_tokens = tokens.input + cache.read
+        output_tokens = tokens.output
         if input_tokens or output_tokens:
             usage = RunUsage(input_tokens=input_tokens, output_tokens=output_tokens)
-            cost = Decimal(str(msg_data.get("cost", 0)))
+            cost = Decimal(str(msg.cost))
             cost_info = TokenCost(token_usage=usage, total_cost=cost)
-        finish = msg_data.get("finish")
-        if finish:
-            provider_details["finish_reason"] = finish
-        parent_id = msg_data.get("parentID")
-        model_name = msg_data.get("modelID")
-    else:
-        model_ref = msg_data.get("model")
-        if isinstance(model_ref, dict):
-            model_name = model_ref.get("modelID")
+        if msg.finish:
+            provider_details["finish_reason"] = msg.finish
+        parent_id = msg.parent_id
+        model_name = msg.model_id
+        agent_name = msg.agent if msg.agent != "default" else None
+    elif isinstance(msg, UserMessage) and msg.model is not None:
+        model_name = msg.model.model_id
 
     return ChatMessage[str](
         content=content,
-        session_id=session_id,
-        role=role,
-        message_id=message_id,
+        session_id=msg.session_id,
+        role=msg.role,
+        message_id=msg.id,
         name=agent_name,
         model_name=model_name,
         cost_info=cost_info,

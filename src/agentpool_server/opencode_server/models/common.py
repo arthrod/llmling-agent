@@ -53,6 +53,7 @@ class Tokens(OpenCodeBaseModel):
     output: int = 0
     reasoning: int = 0
     cache: TokenCache = Field(default_factory=TokenCache)
+    total: int | None = None
 
 
 class TextSpan(OpenCodeBaseModel):

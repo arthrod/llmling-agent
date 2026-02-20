@@ -29,6 +29,9 @@ import anyenv
 from agentpool.log import get_logger
 from agentpool.utils.time_utils import get_now, ms_to_datetime
 from agentpool_config.storage import OpenCodeStorageConfig
+from agentpool_server.opencode_server.models.message import (
+    AssistantMessage,
+)
 from agentpool_storage.base import StorageProvider
 from agentpool_storage.models import ConversationData as ConvData, TokenUsage
 from agentpool_storage.opencode_provider import helpers
@@ -37,6 +40,10 @@ from agentpool_storage.opencode_provider import helpers
 if TYPE_CHECKING:
     from agentpool.messaging import ChatMessage
     from agentpool_config.session import SessionQuery
+    from agentpool_server.opencode_server.models.message import (
+        MessageInfo,
+    )
+    from agentpool_server.opencode_server.models.parts import Part
     from agentpool_storage.models import QueryFilters, StatsFilters
 
 logger = get_logger(__name__)
@@ -74,8 +81,8 @@ class OpenCodeStorageProvider(StorageProvider):
         conn.row_factory = sqlite3.Row
         return conn
 
-    def _read_messages(self, session_id: str) -> list[sqlite3.Row]:
-        """Read all messages for a session, ordered by time_created."""
+    def _read_message_rows(self, session_id: str) -> list[sqlite3.Row]:
+        """Read all message rows for a session, ordered by time_created."""
         try:
             conn = self._get_connection()
         except FileNotFoundError:
@@ -90,27 +97,20 @@ class OpenCodeStorageProvider(StorageProvider):
         finally:
             conn.close()
 
-    def _read_parts_for_message(self, message_id: str) -> list[sqlite3.Row]:
-        """Read all parts for a message, ordered by id."""
-        try:
-            conn = self._get_connection()
-        except FileNotFoundError:
-            return []
-        try:
-            cursor = conn.execute(
-                "SELECT id, message_id, session_id, time_created, time_updated, data "
-                "FROM part WHERE message_id = ? ORDER BY id ASC",
-                (message_id,),
-            )
-            return cursor.fetchall()
-        finally:
-            conn.close()
+    def _parse_message(self, row: sqlite3.Row) -> MessageInfo:
+        """Parse a message DB row into a typed MessageInfo model.
 
-    def _read_parts_for_session(self, session_id: str) -> dict[str, list[dict[str, Any]]]:
+        Injects id and session_id from the row columns into the JSON data
+        before validation, matching OpenCode's own reconstruction pattern.
+        """
+        data: dict[str, Any] = anyenv.load_json(row["data"])
+        return helpers.parse_message_info(data, message_id=row["id"], session_id=row["session_id"])
+
+    def _read_parts_for_session(self, session_id: str) -> dict[str, list[Part]]:
         """Read all parts for a session, grouped by message_id.
 
         Returns:
-            Dict mapping message_id -> list of part data dicts
+            Dict mapping message_id -> list of typed Part models
         """
         try:
             conn = self._get_connection()
@@ -122,21 +122,59 @@ class OpenCodeStorageProvider(StorageProvider):
                 "FROM part WHERE session_id = ? ORDER BY message_id, id ASC",
                 (session_id,),
             )
-            result: dict[str, list[dict[str, Any]]] = defaultdict(list)
+            result: dict[str, list[Part]] = defaultdict(list)
             for row in cursor:
-                data = anyenv.load_json(row["data"])
-                result[row["message_id"]].append(data)
+                data: dict[str, Any] = anyenv.load_json(row["data"])
+                try:
+                    part = helpers.parse_part(
+                        data,
+                        part_id=row["id"],
+                        message_id=row["message_id"],
+                        session_id=row["session_id"],
+                    )
+                    result[row["message_id"]].append(part)
+                except Exception:  # noqa: BLE001
+                    logger.debug(
+                        "Failed to parse part %s (type=%s), skipping",
+                        row["id"],
+                        data.get("type", "unknown"),
+                    )
             return result
         finally:
             conn.close()
 
-    def _parse_msg_data(self, row: sqlite3.Row) -> dict[str, Any]:
-        """Parse the JSON data column from a message row."""
-        return anyenv.load_json(row["data"])
-
-    def _parse_part_data(self, row: sqlite3.Row) -> dict[str, Any]:
-        """Parse the JSON data column from a part row."""
-        return anyenv.load_json(row["data"])
+    def _read_parts_for_message(self, message_id: str) -> list[Part]:
+        """Read all parts for a message, ordered by id."""
+        try:
+            conn = self._get_connection()
+        except FileNotFoundError:
+            return []
+        try:
+            cursor = conn.execute(
+                "SELECT id, message_id, session_id, data "
+                "FROM part WHERE message_id = ? ORDER BY id ASC",
+                (message_id,),
+            )
+            parts: list[Part] = []
+            for row in cursor:
+                data: dict[str, Any] = anyenv.load_json(row["data"])
+                try:
+                    part = helpers.parse_part(
+                        data,
+                        part_id=row["id"],
+                        message_id=row["message_id"],
+                        session_id=row["session_id"],
+                    )
+                    parts.append(part)
+                except Exception:  # noqa: BLE001
+                    logger.debug(
+                        "Failed to parse part %s (type=%s), skipping",
+                        row["id"],
+                        data.get("type", "unknown"),
+                    )
+            return parts
+        finally:
+            conn.close()
 
     async def filter_messages(self, query: SessionQuery) -> list[ChatMessage[str]]:
         """Filter messages based on query."""
@@ -166,16 +204,10 @@ class OpenCodeStorageProvider(StorageProvider):
 
                 for msg_row in msg_rows:
                     msg_id: str = msg_row["id"]
-                    msg_data = anyenv.load_json(msg_row["data"])
+                    msg = self._parse_message(msg_row)
                     parts = parts_by_msg.get(msg_id, [])
 
-                    chat_msg = helpers.to_chat_message(
-                        message_id=msg_id,
-                        session_id=session_id,
-                        msg_data=msg_data,
-                        parts=parts,
-                        time_created=msg_row["time_created"],
-                    )
+                    chat_msg = helpers.to_chat_message(msg=msg, parts=parts)
 
                     # Apply filters
                     if query.agents and chat_msg.name not in query.agents:
@@ -265,22 +297,15 @@ class OpenCodeStorageProvider(StorageProvider):
 
                 for msg_row in msg_rows:
                     msg_id: str = msg_row["id"]
-                    msg_data = anyenv.load_json(msg_row["data"])
+                    msg = self._parse_message(msg_row)
                     parts = parts_by_msg.get(msg_id, [])
 
-                    chat_msg = helpers.to_chat_message(
-                        message_id=msg_id,
-                        session_id=session_id,
-                        msg_data=msg_data,
-                        parts=parts,
-                        time_created=msg_row["time_created"],
-                    )
+                    chat_msg = helpers.to_chat_message(msg=msg, parts=parts)
                     chat_messages.append(chat_msg)
 
                     # Count tokens from assistant messages
-                    if msg_data.get("role") == "assistant":
-                        tokens = msg_data.get("tokens", {})
-                        total_tokens += tokens.get("input", 0) + tokens.get("output", 0)
+                    if isinstance(msg, AssistantMessage):
+                        total_tokens += msg.tokens.input + msg.tokens.output
 
                 if not chat_messages:
                     continue
@@ -333,7 +358,7 @@ class OpenCodeStorageProvider(StorageProvider):
 
             # Query messages with their data, filtered by time
             cursor = conn.execute(
-                "SELECT m.id, m.time_created, m.data "
+                "SELECT m.id, m.session_id, m.time_created, m.data "
                 "FROM message m "
                 "JOIN session s ON m.session_id = s.id "
                 "WHERE s.time_created >= ?",
@@ -341,32 +366,27 @@ class OpenCodeStorageProvider(StorageProvider):
             )
 
             for row in cursor:
-                msg_data = anyenv.load_json(row["data"])
-                role = msg_data.get("role", "")
-                if role != "assistant":
+                msg = self._parse_message(row)
+                if not isinstance(msg, AssistantMessage):
                     continue
 
-                model = msg_data.get("modelID", "unknown")
-                tokens_data = msg_data.get("tokens", {})
-                tokens = tokens_data.get("input", 0) + tokens_data.get("output", 0)
-                cost = msg_data.get("cost", 0.0)
-
+                tokens = msg.tokens.input + msg.tokens.output
                 msg_timestamp = ms_to_datetime(row["time_created"])
 
                 match filters.group_by:
                     case "model":
-                        key = model
+                        key = msg.model_id
                     case "hour":
                         key = msg_timestamp.strftime("%Y-%m-%d %H:00")
                     case "day":
                         key = msg_timestamp.strftime("%Y-%m-%d")
                     case _:
-                        key = msg_data.get("agent", "opencode") or "opencode"
+                        key = msg.agent if msg.agent != "default" else "opencode"
 
                 stats[key]["messages"] += 1
                 stats[key]["total_tokens"] += tokens
-                stats[key]["models"].add(model)
-                stats[key]["total_cost"] += cost or 0.0
+                stats[key]["models"].add(msg.model_id)
+                stats[key]["total_cost"] += msg.cost
         finally:
             conn.close()
 
@@ -402,21 +422,15 @@ class OpenCodeStorageProvider(StorageProvider):
     ) -> list[ChatMessage[str]]:
         """Get all messages for a session."""
         messages: list[ChatMessage[str]] = []
-        msg_rows = self._read_messages(session_id)
+        msg_rows = self._read_message_rows(session_id)
         parts_by_msg = self._read_parts_for_session(session_id)
 
         for msg_row in msg_rows:
             msg_id: str = msg_row["id"]
-            msg_data = anyenv.load_json(msg_row["data"])
+            msg = self._parse_message(msg_row)
             parts = parts_by_msg.get(msg_id, [])
 
-            chat_msg = helpers.to_chat_message(
-                message_id=msg_id,
-                session_id=session_id,
-                msg_data=msg_data,
-                parts=parts,
-                time_created=msg_row["time_created"],
-            )
+            chat_msg = helpers.to_chat_message(msg=msg, parts=parts)
             messages.append(chat_msg)
 
         # Sort by timestamp
@@ -452,23 +466,10 @@ class OpenCodeStorageProvider(StorageProvider):
             if not row:
                 return None
 
-            sid: str = row["session_id"]
-            msg_data = anyenv.load_json(row["data"])
+            msg = self._parse_message(row)
+            parts = self._read_parts_for_message(message_id)
 
-            # Read parts for this message
-            part_rows = conn.execute(
-                "SELECT data FROM part WHERE message_id = ? ORDER BY id ASC",
-                (message_id,),
-            ).fetchall()
-            parts = [anyenv.load_json(p["data"]) for p in part_rows]
-
-            return helpers.to_chat_message(
-                message_id=message_id,
-                session_id=sid,
-                msg_data=msg_data,
-                parts=parts,
-                time_created=row["time_created"],
-            )
+            return helpers.to_chat_message(msg=msg, parts=parts)
         finally:
             conn.close()
 
@@ -493,28 +494,22 @@ class OpenCodeStorageProvider(StorageProvider):
 
         if session_id:
             # Fast path: load all messages for session and traverse in-memory
-            msg_rows = self._read_messages(session_id)
+            msg_rows = self._read_message_rows(session_id)
             parts_by_msg = self._read_parts_for_session(session_id)
 
-            msg_by_id: dict[str, tuple[sqlite3.Row, list[dict[str, Any]]]] = {}
+            msg_by_id: dict[str, tuple[MessageInfo, list[Part]]] = {}
             for msg_row in msg_rows:
                 mid: str = msg_row["id"]
-                msg_by_id[mid] = (msg_row, parts_by_msg.get(mid, []))
+                msg = self._parse_message(msg_row)
+                msg_by_id[mid] = (msg, parts_by_msg.get(mid, []))
 
             current_id: str | None = message_id
             while current_id:
                 entry = msg_by_id.get(current_id)
                 if not entry:
                     break
-                msg_row, parts = entry
-                msg_data = anyenv.load_json(msg_row["data"])
-                chat_msg = helpers.to_chat_message(
-                    message_id=current_id,
-                    session_id=session_id,
-                    msg_data=msg_data,
-                    parts=parts,
-                    time_created=msg_row["time_created"],
-                )
+                msg, parts = entry
+                chat_msg = helpers.to_chat_message(msg=msg, parts=parts)
                 ancestors.append(chat_msg)
                 current_id = chat_msg.parent_id
             ancestors.reverse()
@@ -523,11 +518,11 @@ class OpenCodeStorageProvider(StorageProvider):
         # Slow path: search by message ID
         current_id = message_id
         while current_id:
-            msg = await self.get_message(current_id)
-            if not msg:
+            ancestor_msg = await self.get_message(current_id)
+            if not ancestor_msg:
                 break
-            ancestors.append(msg)
-            current_id = msg.parent_id
+            ancestors.append(ancestor_msg)
+            current_id = ancestor_msg.parent_id
         ancestors.reverse()
         return ancestors
 
