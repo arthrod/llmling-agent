@@ -235,7 +235,12 @@ def chat_message_to_opencode(  # noqa: PLR0915
 
         usage = msg.usage
         cache = TokenCache(read=usage.cache_read_tokens, write=usage.cache_write_tokens)
-        tokens = Tokens(input=usage.input_tokens, output=usage.output_tokens, cache=cache)
+        tokens = Tokens(
+            input=usage.input_tokens,
+            output=usage.output_tokens,
+            cache=cache,
+            total=usage.total_tokens,
+        )
         result = MessageWithParts.assistant(
             message_id=message_id,
             session_id=session_id,
@@ -330,12 +335,6 @@ def chat_message_to_opencode(  # noqa: PLR0915
                                 tsc = TimeStartEndCompacted(start=created_ms, end=end_ms)
                                 state = ToolStateCompleted(title=title, output=output, time=tsc)
                             result.add_tool_part(tool_name, call_id, state=state)
-        tokens = Tokens(
-            input=tokens.input,
-            output=tokens.output,
-            reasoning=tokens.reasoning,
-            cache=TokenCache(read=tokens.cache.read, write=tokens.cache.write),
-        )
         cost = float(msg.cost_info.total_cost) if msg.cost_info else 0.0
         result.add_step_finish_part(reason=msg.finish_reason or "stop", cost=cost, tokens=tokens)
 
