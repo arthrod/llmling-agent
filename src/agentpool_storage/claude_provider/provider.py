@@ -28,7 +28,12 @@ from clawd_code_sdk.storage.helpers import (
     read_session,
     write_entry,
 )
-from clawd_code_sdk.storage.models import ClaudeAssistantEntry, ClaudeEntry, ClaudeUserEntry
+from clawd_code_sdk.storage.models import (
+    ClaudeAssistantEntry,
+    ClaudeEntry,
+    ClaudeToolUseBlock,
+    ClaudeUserEntry,
+)
 
 from agentpool.log import get_logger
 from agentpool.utils.thread_helpers import parallel_map
@@ -65,7 +70,7 @@ def _build_tool_id_mapping(entries: list[ClaudeJSONLEntry]) -> dict[str, str]:
         if not isinstance(content, list):
             continue
         for block in content:
-            if block.type == "tool_use" and block.id and block.name:
+            if isinstance(block, ClaudeToolUseBlock) and block.id and block.name:
                 mapping[block.id] = block.name
     return mapping
 

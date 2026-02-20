@@ -10,6 +10,10 @@ from clawd_code_sdk.storage.models import (
     ClaudeApiMessage,
     ClaudeAssistantEntry,
     ClaudeMessageContent,
+    ClaudeTextBlock,
+    ClaudeThinkingBlock,
+    ClaudeToolResultBlock,
+    ClaudeToolUseBlock,
     ClaudeUsage,
     ClaudeUserEntry,
     ClaudeUserMessage,
@@ -101,11 +105,12 @@ def extract_text_content(message: ClaudeApiMessage | ClaudeUserMessage) -> str:
 
     text_parts: list[str] = []
     for part in msg_content:
-        if part.type == "text" and part.text:
-            text_parts.append(part.text)
-        elif part.type == "thinking" and part.thinking:
-            # Include thinking in display content
-            text_parts.append(f"<thinking>\n{part.thinking}\n</thinking>")
+        match part:
+            case ClaudeTextBlock(text=text) if text:
+                text_parts.append(text)
+            case ClaudeThinkingBlock(thinking=thinking) if thinking:
+                # Include thinking in display content
+                text_parts.append(f"<thinking>\n{thinking}\n</thinking>")
     return "\n".join(text_parts)
 
 
@@ -213,20 +218,21 @@ def build_pydantic_message(
             parts.append(UserPromptPart(content=msg_content, timestamp=timestamp))
         else:
             for block in msg_content:
-                if block.type == "text" and block.text:
-                    parts.append(UserPromptPart(content=block.text, timestamp=timestamp))
-                elif block.type == "tool_result" and block.tool_use_id:
-                    # Reconstruct tool return - look up tool name from mapping
-                    tool_content = block.extract_tool_result_content()
-                    tool_name = tool_id_mapping.get(block.tool_use_id, "")
-                    parts.append(
-                        ToolReturnPart(
-                            tool_name=tool_name,
-                            content=tool_content,
-                            tool_call_id=block.tool_use_id,
-                            timestamp=timestamp,
+                match block:
+                    case ClaudeTextBlock(text=text) if text:
+                        parts.append(UserPromptPart(content=block.text, timestamp=timestamp))
+                    case ClaudeToolResultBlock(tool_use_id=tool_use_id) if tool_use_id:
+                        # Reconstruct tool return - look up tool name from mapping
+                        tool_content = block.extract_text()
+                        tool_name = tool_id_mapping.get(block.tool_use_id, "")
+                        parts.append(
+                            ToolReturnPart(
+                                tool_name=tool_name,
+                                content=tool_content,
+                                tool_call_id=block.tool_use_id,
+                                timestamp=timestamp,
+                            )
                         )
-                    )
 
         return ModelRequest(parts=parts, timestamp=timestamp) if parts else None
 
@@ -246,15 +252,16 @@ def build_pydantic_message(
         resp_parts.append(TextPart(content=msg_content))
     else:
         for block in msg_content:
-            if block.type == "text" and block.text:
-                resp_parts.append(TextPart(content=block.text))
-            elif block.type == "thinking" and block.thinking:
-                resp_parts.append(ThinkingPart(content=block.thinking, signature=block.signature))
-            elif block.type == "tool_use" and block.id and block.name:
-                args = block.input or {}
-                resp_parts.append(
-                    ToolCallPart(tool_name=block.name, args=args, tool_call_id=block.id)
-                )
+            match block:
+                case ClaudeTextBlock(text=text) if text:
+                    resp_parts.append(TextPart(content=text))
+                case ClaudeThinkingBlock(thinking=thinking, signature=signature) if thinking:
+                    resp_parts.append(ThinkingPart(content=thinking, signature=signature))
+                case ClaudeToolUseBlock(id=block_id, name=name) if block_id and name:
+                    args = block.input or {}
+                    resp_parts.append(
+                        ToolCallPart(tool_name=block.name, args=args, tool_call_id=block.id)
+                    )
 
     if not resp_parts:
         return None
