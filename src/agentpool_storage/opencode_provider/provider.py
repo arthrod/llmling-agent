@@ -135,9 +135,9 @@ class OpenCodeStorageProvider(StorageProvider):
                     result[row["message_id"]].append(part)
                 except Exception:  # noqa: BLE001
                     logger.debug(
-                        "Failed to parse part %s (type=%s), skipping",
-                        row["id"],
-                        data.get("type", "unknown"),
+                        "Failed to parse part, skipping",
+                        part_id=row["id"],
+                        part_type=data.get("type", "unknown"),
                     )
             return result
         finally:
@@ -168,9 +168,9 @@ class OpenCodeStorageProvider(StorageProvider):
                     parts.append(part)
                 except Exception:  # noqa: BLE001
                     logger.debug(
-                        "Failed to parse part %s (type=%s), skipping",
-                        row["id"],
-                        data.get("type", "unknown"),
+                        "Failed to parse part, skipping",
+                        part_id=row["id"],
+                        part_type=data.get("type", "unknown"),
                     )
             return parts
         finally:
