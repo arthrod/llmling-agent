@@ -479,16 +479,15 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             except Exception:  # noqa: BLE001
                 pass
             else:
-                for server in live_status.get("mcpServers", []):
-                    name = server.get("name", "unknown")
-                    status = server.get("status", "disconnected")
-                    server_info = server.get("serverInfo") or {}
+                for server in live_status.mcp_servers:
+                    name = server.name
+                    server_info = server.server_info
                     result[name] = MCPServerStatus(
                         name=name,
-                        status=status,
-                        server_type=server.get("type", "unknown"),
-                        server_name=server_info.get("name"),
-                        server_version=server_info.get("version"),
+                        status=server.status,
+                        server_type=server.config.get("type", "unknown"),
+                        server_name=server_info.name,
+                        server_version=server_info.version,
                     )
                 return result
         # Fallback: report from config
