@@ -75,8 +75,7 @@ class OpenCodeStorageProvider(StorageProvider):
     def _get_connection(self) -> sqlite3.Connection:
         """Get a SQLite connection with row factory."""
         if not self.db_path.exists():
-            msg = f"OpenCode database not found: {self.db_path}"
-            raise FileNotFoundError(msg)
+            raise FileNotFoundError(f"OpenCode database not found: {self.db_path}")
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         return conn
@@ -103,7 +102,7 @@ class OpenCodeStorageProvider(StorageProvider):
         Injects id and session_id from the row columns into the JSON data
         before validation, matching OpenCode's own reconstruction pattern.
         """
-        data: dict[str, Any] = anyenv.load_json(row["data"])
+        data = anyenv.load_json(row["data"], return_type=dict)
         return helpers.parse_message_info(data, message_id=row["id"], session_id=row["session_id"])
 
     def _read_parts_for_session(self, session_id: str) -> dict[str, list[Part]]:
@@ -124,7 +123,7 @@ class OpenCodeStorageProvider(StorageProvider):
             )
             result: dict[str, list[Part]] = defaultdict(list)
             for row in cursor:
-                data: dict[str, Any] = anyenv.load_json(row["data"])
+                data = anyenv.load_json(row["data"], return_type=dict)
                 try:
                     part = helpers.parse_part(
                         data,
@@ -157,7 +156,7 @@ class OpenCodeStorageProvider(StorageProvider):
             )
             parts: list[Part] = []
             for row in cursor:
-                data: dict[str, Any] = anyenv.load_json(row["data"])
+                data = anyenv.load_json(row["data"], return_type=dict)
                 try:
                     part = helpers.parse_part(
                         data,
@@ -201,14 +200,11 @@ class OpenCodeStorageProvider(StorageProvider):
                 ).fetchall()
 
                 parts_by_msg = self._read_parts_for_session(session_id)
-
                 for msg_row in msg_rows:
                     msg_id: str = msg_row["id"]
                     msg = self._parse_message(msg_row)
                     parts = parts_by_msg.get(msg_id, [])
-
                     chat_msg = helpers.to_chat_message(msg=msg, parts=parts)
-
                     # Apply filters
                     if query.agents and chat_msg.name not in query.agents:
                         continue
@@ -273,9 +269,7 @@ class OpenCodeStorageProvider(StorageProvider):
                 sql += " LIMIT ?"
                 params.append(filters.limit * 2)  # Over-fetch since we filter more below
 
-            session_rows = conn.execute(sql, params).fetchall()
-
-            for session_row in session_rows:
+            for session_row in conn.execute(sql, params).fetchall():
                 session_id: str = session_row["id"]
                 title: str = session_row["title"]
                 time_created: int = session_row["time_created"]
@@ -291,26 +285,20 @@ class OpenCodeStorageProvider(StorageProvider):
                     continue
 
                 parts_by_msg = self._read_parts_for_session(session_id)
-
                 chat_messages: list[ChatMessage[str]] = []
                 total_tokens = 0
-
                 for msg_row in msg_rows:
                     msg_id: str = msg_row["id"]
                     msg = self._parse_message(msg_row)
                     parts = parts_by_msg.get(msg_id, [])
-
                     chat_msg = helpers.to_chat_message(msg=msg, parts=parts)
                     chat_messages.append(chat_msg)
-
                     # Count tokens from assistant messages
                     if isinstance(msg, AssistantMessage):
                         total_tokens += msg.tokens.input + msg.tokens.output
 
                 if not chat_messages:
                     continue
-
-                first_timestamp = ms_to_datetime(time_created)
 
                 # Apply remaining filters
                 if filters.agent_name and not any(
@@ -327,7 +315,7 @@ class OpenCodeStorageProvider(StorageProvider):
                     id=session_id,
                     agent=chat_messages[0].name or "opencode",
                     title=title,
-                    start_time=first_timestamp.isoformat(),
+                    start_time=ms_to_datetime(time_created).isoformat(),
                     messages=chat_messages,
                     token_usage=usage,
                 )
