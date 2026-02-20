@@ -275,11 +275,7 @@ class KimiACPAgentConfig(BaseACPAgentConfig):
     )
     """Custom agent specification file."""
 
-    model: str | None = Field(
-        default=None,
-        title="Model",
-        examples=["kimi-v1", "kimi-v2"],
-    )
+    model: str | None = Field(default=None, title="Model", examples=["kimi-v1", "kimi-v2"])
     """LLM model to use."""
 
     work_dir: str | None = Field(
@@ -315,7 +311,7 @@ class KimiACPAgentConfig(BaseACPAgentConfig):
             args.extend(["--work-dir", self.work_dir])
         if self.auto_approve:
             args.append("--yolo")
-        if self.thinking is not None and self.thinking:
+        if self.thinking:
             args.append("--thinking")
 
         return args
