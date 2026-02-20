@@ -12,7 +12,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from dataclasses import dataclass, field
-import json
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -92,7 +91,7 @@ class ACPWebSocketServer:
         if self._writer is None:
             return
 
-        data = json.dumps(message) + "\n"
+        data = anyenv.dump_json(message) + "\n"
         await self._writer.send(data.encode())
 
     async def _agent_to_websocket(self) -> None:
@@ -105,7 +104,7 @@ class ACPWebSocketServer:
                     break
 
                 if self._websocket is not None:
-                    await self._websocket.send(json.dumps(message))
+                    await self._websocket.send(anyenv.dump_json(message))
                     logger.debug("Agent → WebSocket: %s", message.get("method", message.get("id")))
             except Exception:
                 logger.exception("Error forwarding agent → WebSocket")
@@ -126,7 +125,7 @@ class ACPWebSocketServer:
                     logger.exception("Invalid JSON from WebSocket")
                     error = ({"code": -32700, "message": "Parse error"},)
                     error_response = {"jsonrpc": "2.0", "id": None, "error": error}
-                    await websocket.send(json.dumps(error_response))
+                    await websocket.send(anyenv.dump_json(error_response))
         except websockets.exceptions.ConnectionClosed:
             logger.info("WebSocket client disconnected")
         finally:
