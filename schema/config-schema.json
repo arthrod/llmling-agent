@@ -496,6 +496,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -646,6 +647,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -1571,6 +1575,99 @@
           "default": null,
           "description": "Model to use for the agent.",
           "title": "Model"
+        },
+        "memory": {
+          "anyOf": [
+            {
+              "enum": [
+                "user",
+                "project",
+                "local"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Memory type for the agent.",
+          "title": "Memory"
+        },
+        "disallowed_tools": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "List of tools the agent cannot use.",
+          "title": "Disallowed Tools"
+        },
+        "skills": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "List of skills the agent can use.",
+          "title": "Skills"
+        },
+        "max_turns": {
+          "default": null,
+          "description": "Maximum number of turns the agent can take.",
+          "title": "Max Turns",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "mcp_servers": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "discriminator": {
+                  "mapping": {
+                    "sse": "#/$defs/SSEMCPServerConfig",
+                    "stdio": "#/$defs/StdioMCPServerConfig",
+                    "streamable-http": "#/$defs/StreamableHTTPMCPServerConfig"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/StdioMCPServerConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/SSEMCPServerConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/StreamableHTTPMCPServerConfig"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Configuration for MCP servers.",
+          "title": "Mcp Servers"
         }
       },
       "required": [
@@ -2194,6 +2291,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -2344,6 +2442,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -2636,6 +2737,7 @@
                 "code_mode": "#/$defs/CodeModeToolsetConfig",
                 "composio": "#/$defs/ComposioToolSetConfig",
                 "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                "cron": "#/$defs/CronToolsetConfig",
                 "custom": "#/$defs/CustomToolsetConfig",
                 "debug": "#/$defs/DebugToolsetConfig",
                 "entry_points": "#/$defs/EntryPointToolsetConfig",
@@ -2715,6 +2817,9 @@
               },
               {
                 "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+              },
+              {
+                "$ref": "#/$defs/CronToolsetConfig"
               },
               {
                 "$ref": "#/$defs/CustomToolsetConfig"
@@ -3243,6 +3348,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -3393,6 +3499,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -4750,6 +4859,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -4900,6 +5010,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -5084,6 +5197,30 @@
             "/tmp/augment-cache"
           ],
           "title": "Augment Cache Dir",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "persona": {
+          "default": null,
+          "description": "Agent persona.",
+          "examples": [
+            "some_name"
+          ],
+          "title": "Agent Persona",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "session_db": {
+          "default": null,
+          "description": "Path to the session database.",
+          "examples": [
+            "~/custom_path/session.db"
+          ],
+          "title": "Session DB Path",
           "type": [
             "string",
             "null"
@@ -7600,6 +7737,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -7750,6 +7888,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -8977,6 +9118,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -9127,6 +9269,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -10230,6 +10375,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -10380,6 +10526,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -10773,6 +10922,7 @@
                 "code_mode": "#/$defs/CodeModeToolsetConfig",
                 "composio": "#/$defs/ComposioToolSetConfig",
                 "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                "cron": "#/$defs/CronToolsetConfig",
                 "custom": "#/$defs/CustomToolsetConfig",
                 "debug": "#/$defs/DebugToolsetConfig",
                 "entry_points": "#/$defs/EntryPointToolsetConfig",
@@ -10852,6 +11002,9 @@
               },
               {
                 "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+              },
+              {
+                "$ref": "#/$defs/CronToolsetConfig"
               },
               {
                 "$ref": "#/$defs/CustomToolsetConfig"
@@ -11485,6 +11638,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -11635,6 +11789,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -12392,6 +12549,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -12542,6 +12700,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -13140,6 +13301,46 @@
       "title": "Cost Limit Condition",
       "type": "object"
     },
+    "CronToolsetConfig": {
+      "additionalProperties": false,
+      "description": "Configuration for cron scheduling toolset.\n\nGives agents the ability to schedule, list, and remove recurring or\none-shot jobs at runtime. Jobs are persisted to a JSON file.\n\nRequires the ``bot`` extra: ``pip install agentpool[bot]``",
+      "properties": {
+        "namespace": {
+          "default": null,
+          "description": "Optional namespace prefix for tool names",
+          "examples": [
+            "web",
+            "files"
+          ],
+          "title": "Tool namespace",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "const": "cron",
+          "default": "cron",
+          "description": "Cron scheduling toolset.",
+          "title": "Type",
+          "type": "string"
+        },
+        "store_path": {
+          "default": "~/.agentpool/cron_jobs.json",
+          "description": "Path to the JSON file where scheduled jobs are persisted.",
+          "examples": [
+            "~/.agentpool/cron_jobs.json",
+            "/tmp/cron.json"
+          ],
+          "title": "Job store path",
+          "type": "string"
+        }
+      },
+      "title": "CronToolsetConfig",
+      "type": "object",
+      "x-doc-title": "Cron Toolset",
+      "x-icon": "octicon:clock-16"
+    },
     "CursorACPAgentConfig": {
       "additionalProperties": false,
       "description": "Configuration for Cursor via ACP.\n\nCursor CLI agent with filesystem and terminal capabilities.\nSee https://github.com/blowmage/cursor-agent-acp-npm\n\nExample:\n    ```yaml\n    agents:\n      coder:\n        type: acp\n        provider: cursor\n        session_dir: ~/.cursor-sessions\n        timeout: 30000\n    ```",
@@ -13636,6 +13837,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -13786,6 +13988,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -20867,6 +21072,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -21017,6 +21223,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -22920,6 +23129,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -23070,6 +23280,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -24687,6 +24900,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -24837,6 +25051,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -26383,20 +26600,19 @@
           "examples": [
             [
               {
-                "import_path": "webbrowser:open",
+                "description": null,
+                "enabled": true,
+                "hints": null,
+                "import_path": "webbrowser.open",
+                "instructions": null,
+                "metadata": {},
                 "name": "web_browser",
+                "requires_confirmation": false,
                 "type": "import"
               }
             ],
             [
               "builtins:print"
-            ],
-            [
-              {
-                "import_path": "builtins:print",
-                "requires_confirmation": true,
-                "type": "import"
-              }
             ]
           ],
           "items": {
@@ -27245,6 +27461,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -27395,6 +27612,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -30614,6 +30834,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -30764,6 +30985,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -32833,6 +33057,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -32983,6 +33208,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -35018,6 +35246,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -35168,6 +35397,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -35338,12 +35570,12 @@
     },
     "OpenCodeStorageConfig": {
       "additionalProperties": false,
-      "description": "OpenCode native storage format configuration.\n\nReads from OpenCode's native JSON format in ~/.local/share/opencode/storage/.\nUseful for importing conversation history from OpenCode.",
+      "description": "OpenCode SQLite storage format configuration.\n\nReads from OpenCode's native SQLite database at ~/.local/share/opencode/opencode.db.\nThis is the current format used by OpenCode >= 1.2.",
       "properties": {
         "type": {
           "const": "opencode",
           "default": "opencode",
-          "description": "OpenCode native storage configuration.",
+          "description": "OpenCode SQLite storage configuration.",
           "title": "Type",
           "type": "string"
         },
@@ -35383,12 +35615,12 @@
           "type": "boolean"
         },
         "path": {
-          "default": "~/.local/share/opencode/storage",
-          "description": "Path to OpenCode storage directory.",
+          "default": "~/.local/share/opencode/opencode.db",
+          "description": "Path to OpenCode SQLite database file.",
           "examples": [
-            "~/.local/share/opencode/storage"
+            "~/.local/share/opencode/opencode.db"
           ],
-          "title": "OpenCode storage directory",
+          "title": "OpenCode database path",
           "type": "string"
         }
       },
@@ -35892,6 +36124,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -36042,6 +36275,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -38663,6 +38899,7 @@
                 "code_mode": "#/$defs/CodeModeToolsetConfig",
                 "composio": "#/$defs/ComposioToolSetConfig",
                 "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                "cron": "#/$defs/CronToolsetConfig",
                 "custom": "#/$defs/CustomToolsetConfig",
                 "debug": "#/$defs/DebugToolsetConfig",
                 "entry_points": "#/$defs/EntryPointToolsetConfig",
@@ -38742,6 +38979,9 @@
               },
               {
                 "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+              },
+              {
+                "$ref": "#/$defs/CronToolsetConfig"
               },
               {
                 "$ref": "#/$defs/CustomToolsetConfig"
@@ -41520,6 +41760,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -41670,6 +41911,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"
@@ -42382,20 +42626,6 @@
             ]
           ],
           "title": "Storage providers"
-        },
-        "session_store": {
-          "default": "sql",
-          "description": "Type of session store to use for session persistence.\n\n- \"sql\": Persist sessions to SQL database (uses same URL as SQL provider)\n- \"memory\": In-memory storage (sessions lost on restart)",
-          "enum": [
-            "sql",
-            "memory"
-          ],
-          "examples": [
-            "sql",
-            "memory"
-          ],
-          "title": "Session store type",
-          "type": "string"
         },
         "default_provider": {
           "default": null,
@@ -47409,6 +47639,7 @@
                     "code_mode": "#/$defs/CodeModeToolsetConfig",
                     "composio": "#/$defs/ComposioToolSetConfig",
                     "config_creation": "#/$defs/ConfigCreationToolsetConfig",
+                    "cron": "#/$defs/CronToolsetConfig",
                     "custom": "#/$defs/CustomToolsetConfig",
                     "debug": "#/$defs/DebugToolsetConfig",
                     "delete_path": "#/$defs/DeletePathToolConfig",
@@ -47559,6 +47790,9 @@
                   },
                   {
                     "$ref": "#/$defs/MCPDiscoveryToolsetConfig"
+                  },
+                  {
+                    "$ref": "#/$defs/CronToolsetConfig"
                   },
                   {
                     "$ref": "#/$defs/CustomToolsetConfig"

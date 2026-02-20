@@ -716,9 +716,7 @@ class BaseAgent[TDeps = None, TResult = str](MessageNode[TDeps, TResult]):
             if self.hooks:
                 pre_run_result = await self.hooks.run_pre_run_hooks(
                     agent_name=self.name,
-                    prompt=user_msg.content
-                    if isinstance(user_msg.content, str)
-                    else str(user_msg.content),
+                    prompt=str(user_msg.content),  # TODO: allow UserContent for hook?
                     session_id=self.session_id,
                 )
                 if pre_run_result.get("decision") == "deny":
