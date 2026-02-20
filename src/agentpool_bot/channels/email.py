@@ -128,10 +128,10 @@ class EmailChannel(BaseChannel):
 
         base_subject = self._last_subject_by_chat.get(to_addr, "agentpool reply")
         subject = self._reply_subject(base_subject)
-        if msg.metadata and isinstance(msg.metadata.get("subject"), str):
-            override = msg.metadata["subject"].strip()
-            if override:
-                subject = override
+        if isinstance(msg.metadata.get("subject"), str) and (
+            override := msg.metadata["subject"].strip()
+        ):
+            subject = override
 
         email_msg = EmailMessage()
         email_msg["From"] = (
@@ -191,14 +191,10 @@ class EmailChannel(BaseChannel):
         """
         if end_date <= start_date:
             return []
-
+        start = self._format_imap_date(start_date)
+        end = self._format_imap_date(end_date)
         return self._fetch_messages(
-            search_criteria=(
-                "SINCE",
-                self._format_imap_date(start_date),
-                "BEFORE",
-                self._format_imap_date(end_date),
-            ),
+            search_criteria=("SINCE", start, "BEFORE", end),
             mark_seen=False,
             dedupe=False,
             limit=max(1, int(limit)),
@@ -267,7 +263,6 @@ class EmailChannel(BaseChannel):
                     f"Date: {date_value}\n\n"
                     f"{body}"
                 )
-
                 metadata = {
                     "message_id": message_id,
                     "subject": subject,
@@ -318,8 +313,7 @@ class EmailChannel(BaseChannel):
         for item in fetched:
             if isinstance(item, tuple) and item and isinstance(item[0], bytes | bytearray):
                 head = bytes(item[0]).decode("utf-8", errors="ignore")
-                m = re.search(r"UID\s+(\d+)", head)
-                if m:
+                if m := re.search(r"UID\s+(\d+)", head):
                     return m.group(1)
         return ""
 
@@ -341,7 +335,6 @@ class EmailChannel(BaseChannel):
             for part in msg.walk():
                 if part.get_content_disposition() == "attachment":
                     continue
-                content_type = part.get_content_type()
                 try:
                     payload = part.get_content()
                 except Exception:  # noqa: BLE001
@@ -350,10 +343,11 @@ class EmailChannel(BaseChannel):
                     payload = payload_bytes.decode(charset, errors="replace")
                 if not isinstance(payload, str):
                     continue
-                if content_type == "text/plain":
-                    plain_parts.append(payload)
-                elif content_type == "text/html":
-                    html_parts.append(payload)
+                match part.get_content_type():
+                    case "text/plain":
+                        plain_parts.append(payload)
+                    case "text/html":
+                        html_parts.append(payload)
             if plain_parts:
                 return "\n\n".join(plain_parts).strip()
             if html_parts:

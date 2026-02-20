@@ -217,7 +217,7 @@ class DiscordChannel(BaseChannel):
         content_parts = [content] if content else []
         media_paths: list[str] = []
         media_dir = Path.home() / ".agentpool" / "media"
-
+        media_dir.mkdir(parents=True, exist_ok=True)
         for attachment in payload.get("attachments") or []:
             url = attachment.get("url")
             filename = attachment.get("filename") or "attachment"
@@ -228,7 +228,6 @@ class DiscordChannel(BaseChannel):
                 content_parts.append(f"[attachment: {filename} - too large]")
                 continue
             try:
-                media_dir.mkdir(parents=True, exist_ok=True)
                 file_path = media_dir / (
                     f"{attachment.get('id', 'file')}_{filename.replace('/', '_')}"
                 )
@@ -242,9 +241,7 @@ class DiscordChannel(BaseChannel):
                 content_parts.append(f"[attachment: {filename} - download failed]")
 
         reply_to = (payload.get("referenced_message") or {}).get("id")
-
         await self._start_typing(channel_id)
-
         await self._handle_message(
             sender_id=sender_id,
             chat_id=channel_id,
@@ -275,6 +272,5 @@ class DiscordChannel(BaseChannel):
 
     async def _stop_typing(self, channel_id: str) -> None:
         """Stop typing indicator for a channel."""
-        task = self._typing_tasks.pop(channel_id, None)
-        if task:
+        if task := self._typing_tasks.pop(channel_id, None):
             task.cancel()
