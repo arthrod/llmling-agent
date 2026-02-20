@@ -88,6 +88,9 @@ class ProcessManagementTools(ResourceProvider):
     ) -> str:
         """Start a command in the background and return process ID.
 
+        This is the preferred tool  for long-running processes that should run in the background
+        (e.g. servers, file watchers, build --watch).
+
         Args:
             command: Command to execute
             args: Command arguments
