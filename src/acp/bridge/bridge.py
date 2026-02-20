@@ -7,6 +7,7 @@ and expose it via a streamable HTTP endpoint.
 from __future__ import annotations
 
 import contextlib
+from dataclasses import dataclass, field
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -49,32 +50,26 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+@dataclass(kw_only=True)
 class ACPBridge:
     """Bridge that proxies stdio ACP agents to streamable HTTP."""
 
-    def __init__(
-        self,
-        command: str,
-        args: list[str] | None = None,
-        *,
-        env: Mapping[str, str] | None = None,
-        cwd: str | Path | None = None,
-        settings: BridgeSettings | None = None,
-    ) -> None:
-        """Initialize the ACP bridge.
+    command: str
+    """ACP Agent shell command which should get spawned by the bridge."""
 
-        Args:
-            command: Command to spawn the ACP agent.
-            args: Arguments for the command.
-            env: Environment variables for the subprocess.
-            cwd: Working directory for the subprocess.
-            settings: Bridge server settings.
-        """
-        self.command = command
-        self.args = args or []
-        self.env = env
-        self.cwd = cwd
-        self.settings = settings or BridgeSettings()
+    args: list[str] = field(default_factory=list)
+    """Arguments for the command."""
+
+    env: Mapping[str, str] | None = None
+    """Environment variables for the subprocess."""
+
+    cwd: str | Path | None = None
+    """Working directory for the subprocess."""
+
+    settings: BridgeSettings = field(default_factory=BridgeSettings)
+    """Bridge server settings."""
+
+    def __post_init__(self) -> None:
         self._connection: ClientSideConnection | None = None
         self._process: Process | None = None
 

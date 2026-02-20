@@ -54,7 +54,7 @@ class ACPWebSocketServer:
     cwd: str | Path | None = None
     """working directory for the subprocess."""
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._process: Process | None = None
         self._reader: ByteReceiveStream | None = None
         self._writer: ByteSendStream | None = None
