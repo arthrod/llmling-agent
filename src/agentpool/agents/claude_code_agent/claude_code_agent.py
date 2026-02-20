@@ -331,7 +331,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         self._max_thinking_tokens: int | Literal["adaptive"] | None = max_thinking_tokens
         self._effort: ReasoningEffort | None = reasoning_effort
         self._permission_mode: PermissionMode | None = permission_mode
-        self._thinking_mode: ThinkingMode = "off"
+        self._thinking_mode: ThinkingMode = "32k"
         self._external_mcp_servers = list(mcp_servers) if mcp_servers else []
         self._env_vars = env_vars
         self._add_dir = add_dir
