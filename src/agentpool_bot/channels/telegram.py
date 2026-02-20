@@ -26,6 +26,16 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
+EXT_MAP = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/gif": ".gif",
+    "audio/ogg": ".ogg",
+    "audio/mpeg": ".mp3",
+    "audio/mp4": ".m4a",
+}
+TYPE_MAP = {"image": ".jpg", "voice": ".ogg", "audio": ".mp3", "file": ""}
+
 
 def _markdown_to_telegram_html(text: str) -> str:
     """Convert markdown to Telegram-safe HTML."""
@@ -40,7 +50,6 @@ def _markdown_to_telegram_html(text: str) -> str:
         return f"\x00CB{len(code_blocks) - 1}\x00"
 
     text = re.sub(r"```[\w]*\n?([\s\S]*?)```", save_code_block, text)
-
     # 2. Extract and protect inline code
     inline_codes: list[str] = []
 
@@ -417,17 +426,6 @@ class TelegramChannel(BaseChannel):
 
     def _get_extension(self, media_type: str, mime_type: str | None) -> str:
         """Get file extension based on media type."""
-        if mime_type:
-            ext_map = {
-                "image/jpeg": ".jpg",
-                "image/png": ".png",
-                "image/gif": ".gif",
-                "audio/ogg": ".ogg",
-                "audio/mpeg": ".mp3",
-                "audio/mp4": ".m4a",
-            }
-            if mime_type in ext_map:
-                return ext_map[mime_type]
-
-        type_map = {"image": ".jpg", "voice": ".ogg", "audio": ".mp3", "file": ""}
-        return type_map.get(media_type, "")
+        if mime_type in EXT_MAP:
+            return EXT_MAP[mime_type]
+        return TYPE_MAP.get(media_type, "")

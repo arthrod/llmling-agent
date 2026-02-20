@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from agentpool.tools.base import ToolKind
 
 
+SubAgentType = Literal["agent", "team_parallel", "team_sequential"]
 # Lifecycle events (aligned with AG-UI protocol)
 
 
@@ -618,7 +619,7 @@ class SubAgentEvent:
 
     source_name: str
     """Name of the agent or team that produced this event."""
-    source_type: Literal["agent", "team_parallel", "team_sequential"]
+    source_type: SubAgentType
     """Type of source: agent, parallel team, or sequential team."""
     event: RichAgentStreamEvent[Any]
     """The actual event from the subagent/team."""
