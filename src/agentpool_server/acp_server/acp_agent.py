@@ -124,7 +124,7 @@ async def get_session_mode_state(agent: BaseAgent) -> SessionModeState | None:
     if not mode_categories:
         return None
     # Find the permissions category (not model)
-    category = next((c for c in mode_categories if c.id != "model"), None)
+    category = next((c for c in mode_categories if c.id == "mode"), None)
     if not category:
         return None
     acp_modes = [  # Convert ModeInfo to ACP SessionMode
