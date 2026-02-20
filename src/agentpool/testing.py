@@ -28,6 +28,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 import json
 from pathlib import Path
+import re
 import subprocess
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -375,35 +376,17 @@ async def run_ci_tests(
         f"test_command={test_command or ''}",
         *repo_args,
     ]
-    _run_gh(*workflow_args)
+    output = _run_gh(*workflow_args)
 
-    # Wait a moment for the run to be created
-    await asyncio.sleep(2)
-
-    # Find the run ID
-    runs_json = _run_gh(
-        "run",
-        "list",
-        "--workflow=test-commit.yml",
-        "--json=databaseId,headSha,status,url",
-        "--limit=5",
-        *repo_args,
-    )
-    runs = json.loads(runs_json)
-
-    # Find the run for our commit
-    run_id: int | None = None
-    run_url = ""
-    for run in runs:
-        # Match by commit SHA (workflow dispatch uses the branch HEAD, but we can match)
-        if run["status"] in ("queued", "in_progress", "pending"):
-            run_id = run["databaseId"]
-            run_url = run["url"]
-            break
-
-    if run_id is None:
-        msg = f"Could not find workflow run for commit {commit_sha}"
+    # gh 2.87+ prints the run URL directly, e.g.:
+    #   https://github.com/owner/repo/actions/runs/12345
+    url_match = re.search(r"(https://github\.com/\S+/actions/runs/(\d+))", output)
+    if url_match is None:
+        msg = f"Could not parse workflow run URL from gh output: {output}"
         raise RuntimeError(msg)
+
+    run_url = url_match.group(1)
+    run_id = int(url_match.group(2))
 
     # Poll for completion
     while True:
