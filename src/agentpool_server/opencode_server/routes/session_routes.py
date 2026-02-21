@@ -107,18 +107,13 @@ async def list_sessions(state: StateDep) -> list[Session]:
     Delegates to agent.list_sessions() which handles fetching sessions
     from the appropriate storage (pool storage, Claude storage, ACP server, etc.).
     """
-    # Get sessions from the agent - filter by agent's cwd if available
-    cwd = state.agent.env.cwd
-    session_data_list = await state.agent.list_sessions(cwd=cwd)
-
     # Convert to OpenCode Session format and cache
     sessions: list[Session] = []
-    for data in session_data_list:
+    for data in await state.agent.list_sessions(cwd=state.agent.env.cwd):
         session = session_data_to_opencode(data)
         # Cache in state for later use
         state.sessions[data.session_id] = session
         sessions.append(session)
-
     return sessions
 
 
@@ -239,7 +234,6 @@ async def abort_session(session_id: str, state: StateDep) -> bool:
     # Update and broadcast session status to notify clients
     state.session_status[session_id] = SessionStatus(type="idle")
     await state.broadcast_event(SessionStatusEvent.create(session_id, SessionStatus(type="idle")))
-
     return True
 
 
@@ -519,11 +513,8 @@ async def run_shell_command(
     state.session_status[session_id] = SessionStatus(type="busy")
     await state.broadcast_event(SessionStatusEvent.create(session_id, SessionStatus(type="busy")))
     # Add step-start part
-    step_start = StepStartPart(
-        id=identifier.ascending("part"),
-        message_id=assistant_msg_id,
-        session_id=session_id,
-    )
+    part_id = identifier.ascending("part")
+    step_start = StepStartPart(id=part_id, message_id=assistant_msg_id, session_id=session_id)
     assistant_msg_with_parts.parts.append(step_start)
     await state.broadcast_event(PartUpdatedEvent.create(step_start))
     # Execute the command
@@ -549,11 +540,8 @@ async def run_shell_command(
     )
     assistant_msg_with_parts.parts.append(text_part)
     await state.broadcast_event(PartUpdatedEvent.create(text_part))
-    step_finish = StepFinishPart(
-        id=identifier.ascending("part"),
-        message_id=assistant_msg_id,
-        session_id=session_id,
-    )
+    part_id = identifier.ascending("part")
+    step_finish = StepFinishPart(id=part_id, message_id=assistant_msg_id, session_id=session_id)
     assistant_msg_with_parts.parts.append(step_finish)
     await state.broadcast_event(PartUpdatedEvent.create(step_finish))
     # Update message with completion time
@@ -618,15 +606,12 @@ async def respond_to_permission(
     resolved = input_provider.resolve_permission(permission_id, body.reply)
     if not resolved:
         raise HTTPException(status_code=404, detail="Permission not found or already resolved")
-
-    await state.broadcast_event(
-        PermissionResolvedEvent.create(
-            session_id=session_id,
-            request_id=permission_id,
-            reply=body.reply,
-        )
+    event = PermissionResolvedEvent.create(
+        session_id=session_id,
+        request_id=permission_id,
+        reply=body.reply,
     )
-
+    await state.broadcast_event(event)
     return True
 
 
