@@ -85,7 +85,7 @@ class ClientSideConnection(Agent):
         observers: list[StreamObserver] | None = None,
     ) -> None:
         # Build client first so handler can delegate
-        client = to_client(self) if callable(to_client) else to_client
+        client = to_client(self) if callable(to_client) else to_client  # ty: ignore[call-top-callable]
         handler = partial(_handle_client_method, client)
         self._conn = Connection(handler, input_stream, output_stream, observers=observers)
 

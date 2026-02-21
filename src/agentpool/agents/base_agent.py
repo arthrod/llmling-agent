@@ -226,7 +226,7 @@ class BaseAgent[TDeps = None, TResult = str](MessageNode[TDeps, TResult]):
         self._output_type: type[TResult] = output_type
         self.tools = ToolManager()
         handlers = resolve_event_handlers(event_handlers)
-        self.event_handler: MultiEventHandler[IndividualEventHandler] = MultiEventHandler(handlers)
+        self.event_handler: MultiEventHandler[IndividualEventHandler] = MultiEventHandler(handlers)  # ty: ignore[invalid-assignment]
         self.hooks = hooks
         self._cancelled = False
         self._current_stream_task: asyncio.Task[Any] | None = None
@@ -278,7 +278,7 @@ class BaseAgent[TDeps = None, TResult = str](MessageNode[TDeps, TResult]):
         match other:
             case Team():
                 return Team([self, *other.nodes])
-            case Callable():
+            case Callable():  # ty: ignore[invalid-match-pattern]
                 agent_2 = Agent.from_callback(other, agent_pool=self.agent_pool)  # ty: ignore[no-matching-overload]
                 return Team([self, agent_2])
             case MessageNode():

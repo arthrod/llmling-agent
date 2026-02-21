@@ -254,7 +254,7 @@ class ToolManager:
         from agentpool.tools.base import Tool
 
         match tools:
-            case str() | Callable() | Tool():
+            case str() | Callable() | Tool():  # ty: ignore[invalid-match-pattern]
                 tools_list = [tools]
             case Sequence():
                 tools_list = list(tools)
