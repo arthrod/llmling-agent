@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from agentpool_server.opencode_server.models.base import OpenCodeBaseModel
+
+
+DEFAULT_IGNORE = ["node_modules/**", "__pycache__/**", ".venv/**", "*.pyc", ".mypy_cache/**"]
 
 
 class Keybinds(BaseModel):
@@ -99,11 +102,11 @@ class Config(OpenCodeBaseModel):
     """Auto-update: true, false, or 'notify' for notifications only."""
 
     # Keybinds
-    keybinds: Keybinds | None = None
+    keybinds: Keybinds = Field(default_factory=Keybinds)
     """Custom keybind configurations."""
 
     # File watcher
-    watcher: WatcherConfig | None = None
+    watcher: WatcherConfig = Field(default_factory=lambda: WatcherConfig(ignore=DEFAULT_IGNORE))
     """File watcher configuration for ignore patterns."""
 
     # Additional fields OpenCode supports (not typically needed for agentpool):

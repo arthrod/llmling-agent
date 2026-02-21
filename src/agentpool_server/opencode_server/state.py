@@ -68,7 +68,7 @@ class ServerState:
     start_time: float = field(default_factory=time.time)
     """Server start time (seconds since epoch)."""
 
-    config: Config | None = None
+    config: Config = field(default_factory=Config)
     """Mutable runtime configuration. Initialized after state creation."""
 
     sessions: dict[str, Session] = field(default_factory=dict)
