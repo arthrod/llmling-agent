@@ -458,10 +458,10 @@ class Todo(OpenCodeBaseModel):
     content: str
     """Brief description of the task."""
 
-    status: str
+    status: Literal["pending", "in_progress", "completed", "cancelled"]
     """Current status: pending, in_progress, completed, cancelled."""
 
-    priority: str
+    priority: Literal["high", "medium", "low"]
     """Priority level: high, medium, low."""
 
 

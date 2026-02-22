@@ -30,7 +30,7 @@ class FileStatus(OpenCodeBaseModel):
     """File status (for VCS)."""
 
     path: str
-    status: str  # modified, added, deleted, etc.
+    status: Literal["added", "deleted", "modified"]
 
 
 class TextWrapper(OpenCodeBaseModel):
@@ -82,7 +82,7 @@ class Symbol(OpenCodeBaseModel):
     """Code symbol."""
 
     name: str
-    kind: str
+    kind: int  # LSP SymbolKind (1-26), see LSP spec
     path: str
     line: int
     character: int
