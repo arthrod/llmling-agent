@@ -682,7 +682,7 @@ async def summarize_session(  # noqa: PLR0915
     # The LLM sees the complete conversation and generates a continuation prompt.
     response_text = ""
     usage = None
-    cost = 0
+    cost = 0.0
     text_part: TextPart | None = None
     try:
         # Stream events from the agent with the summarization prompt
