@@ -10,11 +10,12 @@ from __future__ import annotations
 from difflib import unified_diff
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, assert_never, cast
-import uuid
 
 from clawd_code_sdk.models import BashInput
 from clawd_code_sdk.models.output_types import (
+    BashOutput,
     EditOutput,
+    ReadOutput,
     TodoWriteOutput,
     WriteOutput,
 )
@@ -22,6 +23,15 @@ from pydantic import TypeAdapter
 from pydantic_ai import PartDeltaEvent, RequestUsage, RunUsage, TextPartDelta, ThinkingPartDelta
 
 from agentpool.agents.events import ToolCallCompleteEvent, ToolCallStartEvent
+from agentpool_server.opencode_server.models.tool_metadata import (
+    BashMetadata,
+    EditMetadata,
+    FileDiff,
+    ReadMetadata,
+    TodoInfo,
+    TodoMetadata,
+    WriteMetadata,
+)
 
 
 if TYPE_CHECKING:
@@ -38,6 +48,7 @@ if TYPE_CHECKING:
     from agentpool.agents.context import ConfirmationResult
     from agentpool.agents.events import RichAgentStreamEvent
     from agentpool_config.mcp_server import MCPServerConfig as NativeMCPServerConfig
+    from agentpool_server.opencode_server.models.tool_metadata import ToolMetadata
 
 
 def to_thinking_config(
@@ -250,7 +261,7 @@ def convert_to_opencode_metadata(  # noqa: PLR0911
     tool_name: str,
     tool_use_result: dict[str, Any] | str | None,
     tool_input: ToolInput | dict[str, Any] | None = None,
-) -> dict[str, Any] | None:
+) -> ToolMetadata | None:
     """Convert Claude Code SDK tool_use_result to OpenCode metadata format."""
     # Handle None or string results (bash errors come as plain strings)
     if tool_use_result is None or not isinstance(tool_use_result, dict):
@@ -263,25 +274,27 @@ def convert_to_opencode_metadata(  # noqa: PLR0911
         case "edit":
             return _convert_edit_result(cast(EditOutput, tool_use_result))
         case "read":
-            return _convert_read_result(tool_use_result)
+            return _convert_read_result(cast(ReadOutput, tool_use_result))
         case "bash":
-            return _convert_bash_result(tool_use_result, cast(BashInput, tool_input))
+            return _convert_bash_result(
+                cast(BashOutput, tool_use_result),
+                cast(BashInput, tool_input),
+            )
         case "todowrite":
             return _convert_todowrite_result(cast(TodoWriteOutput, tool_use_result))
         case _:
             return None
 
 
-def _convert_write_result(result: WriteOutput) -> dict[str, Any] | None:
+def _convert_write_result(result: WriteOutput) -> WriteMetadata | None:
     """Convert Write tool result to OpenCode metadata."""
     file_path = result.get("filePath")
-    content = result.get("content")
-    if not file_path or content is None:
+    if not file_path:
         return None
-    return {"filePath": file_path, "content": content}
+    return WriteMetadata(filepath=file_path, exists=True, diagnostics={})
 
 
-def _convert_edit_result(result: EditOutput) -> dict[str, Any] | None:
+def _convert_edit_result(result: EditOutput) -> EditMetadata | None:
     """Convert Edit tool result to OpenCode metadata."""
     file_path = result.get("filePath")
     original_file = result.get("originalFile")
@@ -301,38 +314,34 @@ def _convert_edit_result(result: EditOutput) -> dict[str, Any] | None:
     diff = _build_unified_diff(file_path, original_file, after_content, structured_patch)
     # Count additions and deletions
     additions, deletions = _count_diff_changes(structured_patch)
-    return {
-        "diff": diff,
-        "filediff": {
-            "file": file_path,
-            "before": original_file or "",
-            "after": after_content or "",
-            "additions": additions,
-            "deletions": deletions,
-        },
-    }
+    filediff = FileDiff(
+        file=file_path,
+        before=original_file or "",
+        after=after_content or "",
+        additions=additions,
+        deletions=deletions,
+    )
+    return EditMetadata(diff=diff, filediff=filediff, diagnostics={})
 
 
-def _convert_read_result(result: dict[str, Any]) -> dict[str, Any] | None:
+def _convert_read_result(result: ReadOutput) -> ReadMetadata | None:
     """Convert Read tool result to OpenCode metadata."""
     # Read results have a nested "file" object
     file_info = result.get("file")
     if not file_info:
         return None
 
-    return {
-        "filePath": file_info.get("filePath"),
-        "content": file_info.get("content"),
-        "numLines": file_info.get("numLines"),
-        "startLine": file_info.get("startLine"),
-        "totalLines": file_info.get("totalLines"),
-    }
+    content = file_info.get("content", "")
+    # Build preview from first ~20 lines
+    lines = content.splitlines()
+    preview = "\n".join(lines[:20])
+    num_lines = file_info.get("numLines", 0)
+    total_lines = file_info.get("totalLines", 0)
+    truncated = num_lines < total_lines if total_lines else False
+    return ReadMetadata(preview=preview, truncated=truncated, loaded=[])
 
 
-def _convert_bash_result(
-    result: dict[str, Any],
-    tool_input: BashInput | None,
-) -> dict[str, Any] | None:
+def _convert_bash_result(result: BashOutput, tool_input: BashInput | None) -> BashMetadata:
     """Convert Bash tool result to OpenCode metadata."""
     stdout = result.get("stdout", "")
     stderr = result.get("stderr", "")
@@ -343,7 +352,7 @@ def _convert_bash_result(
     # Get description from tool input (Claude Code uses "description" field)
     description = ""
     if tool_input:
-        description = tool_input.get("description", tool_input.get("command", ""))
+        description = tool_input.get("description") or tool_input.get("command", "")
 
     # Note: Claude Code SDK doesn't provide exit code in the success result structure,
     # it's only available in error strings. For successful commands, exit is 0.
@@ -353,33 +362,31 @@ def _convert_bash_result(
     exit_code: int | None = 0
     if result.get("interrupted"):
         exit_code = None  # Interrupted commands don't have a clean exit code
-    return {"output": output, "exit": exit_code, "description": description}
+    return BashMetadata(output=output, exit=exit_code, description=description)
 
 
-def _convert_todowrite_result(result: TodoWriteOutput) -> dict[str, Any] | None:
+def _convert_todowrite_result(result: TodoWriteOutput) -> TodoMetadata | None:
     """Convert TodoWrite tool result to OpenCode metadata."""
     new_todos = result.get("newTodos", [])
     if not new_todos:
         return None
 
-    # Convert to OpenCode format, generating IDs and inferring priority
-    todos = []
+    # Convert to OpenCode format, inferring priority
+    todos: list[TodoInfo] = []
     for i, todo in enumerate(new_todos):
         content = todo.get("content", "")
-        status = todo.get("status", "pending")
-
         # Infer priority from position (first items = higher priority)
         # or from content keywords
         priority = _infer_priority(content, i, len(new_todos))
+        todos.append(
+            TodoInfo(
+                content=content,
+                status=todo.get("status", "pending"),
+                priority=priority,
+            )
+        )
 
-        todos.append({
-            "id": str(uuid.uuid4()),
-            "content": content,
-            "status": status,
-            "priority": priority,
-        })
-
-    return {"todos": todos}
+    return TodoMetadata(todos=todos)
 
 
 # Priority thresholds for position-based inference

@@ -1220,8 +1220,8 @@ class FSSpecTools(ResourceProvider):
         agent_ctx: AgentContext,
         path: str,
         display_description: str,
-        mode: str = "edit",
-        matcher: str = "default",
+        mode: Literal["edit", "create", "overwrite"] = "edit",
+        matcher: Literal["zed", "default"] = "default",
     ) -> str:
         r"""Edit or create a file with streaming support.
 
