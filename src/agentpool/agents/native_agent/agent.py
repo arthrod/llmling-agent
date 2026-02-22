@@ -23,7 +23,8 @@ from agentpool.agents.native_agent.helpers import process_tool_event
 from agentpool.log import get_logger
 from agentpool.messaging import ChatMessage, MessageHistory
 from agentpool.storage import StorageManager
-from agentpool.tools import Tool, ToolManager
+from agentpool.tools import ToolManager
+from agentpool.tools.base import FunctionTool
 from agentpool.tools.exceptions import ToolError
 from agentpool.utils.inspection import get_argument_key
 from agentpool.utils.result_utils import to_type
@@ -65,7 +66,7 @@ if TYPE_CHECKING:
     from agentpool.prompts.prompts import PromptType
     from agentpool.resource_providers import ResourceProvider
     from agentpool.sessions import SessionData
-    from agentpool.tools.base import FunctionTool
+    from agentpool.tools import Tool
     from agentpool.ui.base import InputProvider
     from agentpool_config.knowledge import Knowledge
     from agentpool_config.mcp_server import MCPServerConfig
@@ -584,7 +585,7 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
         tool_name = name or f"ask_{self.name}"
         wrapped_tool.__doc__ = docstring
         wrapped_tool.__name__ = tool_name
-        return Tool.from_callable(wrapped_tool, source="agent")
+        return FunctionTool.from_callable(wrapped_tool, source="agent")
 
     async def get_agentlet[AgentOutputType](
         self,
