@@ -105,7 +105,6 @@ from agentpool.agents.events import (
     ToolResultMetadataEvent,
 )
 from agentpool.agents.events.infer_info import derive_rich_tool_info
-from agentpool.agents.events.processors import FileTracker
 from agentpool.agents.exceptions import (
     AgentNotInitializedError,
     UnknownCategoryError,
@@ -146,7 +145,7 @@ if TYPE_CHECKING:
 
     from agentpool.agents.events import RichAgentStreamEvent
     from agentpool.agents.modes import ModeCategory
-    from agentpool.common_types import AnyEventHandlerType, StrPath
+    from agentpool.common_types import AnyEventHandlerType, SimpleJsonType, StrPath
     from agentpool.delegation import AgentPool
     from agentpool.hooks import AgentHooks
     from agentpool.messaging import MessageHistory
@@ -882,14 +881,13 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         emitted_tool_starts: set[str] = set()
         tool_accumulator = ToolCallAccumulator()
         resolved_model: str | None = None
-        # Track files modified during this run
-        file_tracker = FileTracker()
         # Accumulate metadata events by tool_call_id (workaround for SDK stripping _meta)
         tool_metadata: dict[str, dict[str, Any]] = {}
         # Handle ephemeral execution (fork session if store_history=False)
         fork_client = None
         client = self._client
         result_message: ResultMessage | None = None
+        msg_metadata: SimpleJsonType = {}
 
         if not store_history and self._sdk_session_id:
             # Create fork client that shares parent's context but has separate session ID
@@ -969,15 +967,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
                                             content=rich_info.content,
                                             raw_input=input_data,
                                         )
-                                        # Track file modifications
-                                        file_tracker.process_event(tool_start_event)
                                         yield tool_start_event
-                                    # Already emitted ToolCallStartEvent early via streaming.
-                                    # Dont emit a progress update here - it races with
-                                    # permission requests and causes Zed to cancel the dialog.
-                                    # Just track file modifications.
-                                    elif fpath := file_tracker.extractor(display_name, input_data):
-                                        file_tracker.touched_files.add(fpath)
                                     # Clean up from accumulator (always, both branches)
                                     tool_accumulator.complete(tc_id)
                                 case ToolResultBlock(tool_use_id=tc_id, content=content):
@@ -1163,10 +1153,10 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         except asyncio.CancelledError:
             self.log.info("Stream cancelled via CancelledError")
             # Emit partial response on cancellation
-            # Build metadata with file tracking and SDK session ID
-            metadata = file_tracker.get_metadata()
+            # Build metadata with SDK session ID
+            msg_metadata = {}
             if self._sdk_session_id:
-                metadata["sdk_session_id"] = self._sdk_session_id
+                msg_metadata["sdk_session_id"] = self._sdk_session_id
             content = "".join(i.content for i in current_response_parts if isinstance(i, TextPart))
             response_msg = ChatMessage[TResult](
                 content=content,  # type: ignore[arg-type]
@@ -1178,7 +1168,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
                 model_name=resolved_model or self.model_name,
                 messages=model_messages,
                 finish_reason="stop",
-                metadata=metadata,
+                metadata=msg_metadata,
             )
             yield StreamCompleteEvent(message=response_msg)
             # Post-processing handled by base class
@@ -1218,11 +1208,10 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             total_cost = Decimal(str(result_message.total_cost_usd))
             cost_info = TokenCost(token_usage=run_usage, total_cost=total_cost)
             request_usage = to_request_usage(result_message.usage)
-        # Determine finish reason - check if we were cancelled
-        # Build metadata with file tracking and SDK session ID
-        metadata = file_tracker.get_metadata()
+        # Build metadata with SDK session ID
+        msg_metadata = {}
         if self._sdk_session_id:
-            metadata["sdk_session_id"] = self._sdk_session_id
+            msg_metadata["sdk_session_id"] = self._sdk_session_id
 
         chat_message = ChatMessage[TResult](
             content=final_content,
@@ -1237,7 +1226,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             usage=request_usage or RequestUsage(),
             response_time=result_message.duration_ms / 1000 if result_message else None,
             finish_reason="stop" if self._cancelled else None,
-            metadata=metadata,
+            metadata=msg_metadata,
         )
 
         # Emit stream complete - post-processing handled by base class

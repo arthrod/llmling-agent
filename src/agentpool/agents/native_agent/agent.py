@@ -17,7 +17,6 @@ from pydantic_ai.tools import ToolDefinition
 
 from agentpool.agents.base_agent import BaseAgent
 from agentpool.agents.events import RunStartedEvent, StreamCompleteEvent
-from agentpool.agents.events.processors import FileTracker
 from agentpool.agents.exceptions import UnknownCategoryError, UnknownModeError
 from agentpool.agents.native_agent.helpers import process_tool_event
 from agentpool.log import get_logger
@@ -678,8 +677,6 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
         agentlet = await self.get_agentlet(None, self._output_type, input_provider)
         response_msg: ChatMessage[Any] | None = None
         # Prepend pending context parts (prompts are already pydantic-ai UserContent format)
-        # Track tool call starts to combine with results later
-        file_tracker = FileTracker()
         async with agentlet.iter(
             prompts,
             deps=deps,  # type: ignore[arg-type]
@@ -701,7 +698,7 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
                             node.stream(agent_run.ctx) as stream,
                             merge_queue_into_iterator(stream, self._event_queue) as merged,  # type: ignore[arg-type]
                         ):
-                            async for event in file_tracker(merged):  # ty: ignore[invalid-argument-type]
+                            async for event in merged:
                                 if self._cancelled:
                                     break
                                 yield event
@@ -740,7 +737,6 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
                     session_id=self.session_id,
                     parent_id=user_msg.message_id,
                     response_time=response_time,
-                    metadata=file_tracker.get_metadata(),
                 )
             else:
                 raise RuntimeError("Stream completed without producing a result")

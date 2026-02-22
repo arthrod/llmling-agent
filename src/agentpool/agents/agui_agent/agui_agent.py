@@ -30,7 +30,6 @@ from pydantic_ai import (
 from agentpool.agents.agui_agent.helpers import execute_tool_calls, parse_sse_stream
 from agentpool.agents.base_agent import BaseAgent
 from agentpool.agents.events import RunStartedEvent, StreamCompleteEvent
-from agentpool.agents.events.processors import FileTracker
 from agentpool.agents.exceptions import (
     AgentNotInitializedError,
     OperationNotAllowedError,
@@ -328,7 +327,6 @@ class AGUIAgent[TDeps = None](BaseAgent[TDeps, str]):
         # Build messages list: history + new user message
         messages: list[Message] = [*history_messages, user_message]
         pending_tool_results: list[ToolMessage] = []
-        file_tracker = FileTracker()
         tools = await self.tools.get_tools(state="enabled")
         try:  # Loop to handle tool calls - agent may request multiple rounds
             while True:
@@ -357,7 +355,6 @@ class AGUIAgent[TDeps = None](BaseAgent[TDeps, str]):
                             response_parts=response_parts,
                             tool_calls_pending=tool_calls_pending,
                         ):
-                            file_tracker.process_event(event)
                             yield event
                 except httpx.HTTPError:
                     self.log.exception("HTTP error during AG-UI run")
@@ -412,7 +409,6 @@ class AGUIAgent[TDeps = None](BaseAgent[TDeps, str]):
                 parent_id=user_msg.message_id,
                 messages=model_messages,
                 finish_reason="stop",
-                metadata=file_tracker.get_metadata(),
             )
             yield StreamCompleteEvent(message=final_message)
             return
@@ -423,7 +419,6 @@ class AGUIAgent[TDeps = None](BaseAgent[TDeps, str]):
 
         # Final drain of event queue after stream completes
         async for e in self._drain_event_queue():
-            file_tracker.process_event(e)
             yield e
         # Calculate approximate token usage from what we can observe
         usage, cost_info = await calculate_usage_from_parts(
@@ -441,7 +436,6 @@ class AGUIAgent[TDeps = None](BaseAgent[TDeps, str]):
             session_id=self.session_id,
             parent_id=user_msg.message_id,
             messages=model_messages,
-            metadata=file_tracker.get_metadata(),
             usage=usage,
             cost_info=cost_info,
         )

@@ -37,12 +37,9 @@ from .tts_handlers import (
     OpenAITTSEventHandler,
 )
 from .processors import (
-    FileTracker,
-    FileTrackingProcessor,
     StreamPipeline,
     StreamProcessor,
     event_handler_processor,
-    extract_file_path_from_tool_call,
 )
 
 __all__ = [
@@ -54,8 +51,6 @@ __all__ = [
     "DiffContentItem",
     "EdgeTTSEventHandler",
     "FileContentItem",
-    "FileTracker",
-    "FileTrackingProcessor",
     "LocationContentItem",
     "OpenAITTSEventHandler",
     "PartDeltaEvent",
@@ -79,7 +74,6 @@ __all__ = [
     "ToolResultMetadataEvent",
     "detailed_print_handler",
     "event_handler_processor",
-    "extract_file_path_from_tool_call",
     "resolve_event_handlers",
     "simple_print_handler",
 ]
