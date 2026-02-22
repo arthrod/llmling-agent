@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
     from agentpool import AgentPool
     from agentpool.prompts.prompts import BasePrompt
-    from agentpool.tools import Tool
+    from agentpool.tools import FunctionTool
     from agentpool_config.pool_server import MCPPoolServerConfig
 
     LifespanHandler = Callable[
@@ -105,7 +105,7 @@ class MCPServer(BaseServer):
 
         for tool in tools:
             # Create handler with closure to capture tool instance
-            def make_handler(tool_instance: Tool) -> Callable[..., Awaitable[str]]:
+            def make_handler(tool_instance: FunctionTool) -> Callable[..., Awaitable[str]]:
                 async def handler(**kwargs: Any) -> str:
                     """Dynamically generated tool handler."""
                     # Filter out _meta arguments
