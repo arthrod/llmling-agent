@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, assert_never, cast
 import uuid
 
-from clawd_code_sdk.models import Usage
 from pydantic import TypeAdapter
 from pydantic_ai import PartDeltaEvent, RequestUsage, RunUsage, TextPartDelta, ThinkingPartDelta
 
@@ -27,7 +26,7 @@ if TYPE_CHECKING:
         PermissionResult,
         ThinkingConfig,
     )
-    from clawd_code_sdk.models import SystemPromptPreset
+    from clawd_code_sdk.models import SystemPromptPreset, ToolInput, Usage
 
     from agentpool.agents.context import ConfirmationResult
     from agentpool.agents.events import RichAgentStreamEvent
@@ -243,7 +242,7 @@ def to_output_format(output_type: type) -> dict[str, Any] | None:
 def convert_to_opencode_metadata(  # noqa: PLR0911
     tool_name: str,
     tool_use_result: dict[str, Any] | str | None,
-    tool_input: dict[str, Any] | None = None,
+    tool_input: ToolInput | dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Convert Claude Code SDK tool_use_result to OpenCode metadata format."""
     # Handle None or string results (bash errors come as plain strings)
@@ -325,7 +324,7 @@ def _convert_read_result(result: dict[str, Any]) -> dict[str, Any] | None:
 
 def _convert_bash_result(
     result: dict[str, Any],
-    tool_input: dict[str, Any] | None,
+    tool_input: ToolInput | dict[str, Any] | None,
 ) -> dict[str, Any] | None:
     """Convert Bash tool result to OpenCode metadata."""
     stdout = result.get("stdout", "")

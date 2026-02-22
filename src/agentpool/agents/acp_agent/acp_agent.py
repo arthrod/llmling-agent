@@ -491,7 +491,7 @@ class ACPAgent[TDeps = None](BaseAgent[TDeps, str]):
                                 enriched_event, metadata=tool_metadata[enriched_event.tool_call_id]
                             )
                         event = enriched_event  # noqa: PLW2901
-                    part = event_to_part(event)
+                    part = event_to_part(event)  # ty: ignore[invalid-argument-type]
                     if isinstance(part, TextPart):
                         text_chunks.append(part.content)
                     if part:

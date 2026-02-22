@@ -703,7 +703,10 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
                                     break
                                 yield event
                                 if combined := process_tool_event(
-                                    self.name, event, pending_tcs, message_id
+                                    self.name,
+                                    event,  # ty: ignore[invalid-argument-type]
+                                    pending_tcs,
+                                    message_id,
                                 ):
                                     yield combined
             except asyncio.CancelledError:
