@@ -12,8 +12,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, assert_never, cast
 import uuid
 
+from clawd_code_sdk.models import Usage
 from pydantic import TypeAdapter
-from pydantic_ai import PartDeltaEvent, TextPartDelta, ThinkingPartDelta
+from pydantic_ai import PartDeltaEvent, RequestUsage, RunUsage, TextPartDelta, ThinkingPartDelta
 
 from agentpool.agents.events import ToolCallCompleteEvent, ToolCallStartEvent
 
@@ -45,6 +46,24 @@ def to_thinking_config(
     if max_thinking_tokens:
         return ThinkingConfigEnabled(type="enabled", budget_tokens=max_thinking_tokens)
     return None
+
+
+def to_run_usage(usage_dict: Usage) -> RunUsage:
+    return RunUsage(
+        input_tokens=usage_dict["input_tokens"],
+        output_tokens=usage_dict["output_tokens"],
+        cache_read_tokens=usage_dict["cache_read_input_tokens"],
+        cache_write_tokens=usage_dict["cache_creation_input_tokens"],
+    )
+
+
+def to_request_usage(usage_dict: Usage) -> RequestUsage:
+    return RequestUsage(
+        input_tokens=usage_dict["input_tokens"],
+        output_tokens=usage_dict["output_tokens"],
+        cache_read_tokens=usage_dict["cache_read_input_tokens"],
+        cache_write_tokens=usage_dict["cache_creation_input_tokens"],
+    )
 
 
 def content_block_to_event(block: ContentBlock, index: int = 0) -> RichAgentStreamEvent[Any] | None:

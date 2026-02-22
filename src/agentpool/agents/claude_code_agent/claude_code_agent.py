@@ -70,7 +70,6 @@ from pydantic_ai import (
     ModelRequest,
     ModelResponse,
     PartEndEvent,
-    RunUsage,
     TextPart,
     TextPartDelta,
     ThinkingPart,
@@ -90,6 +89,8 @@ from agentpool.agents.claude_code_agent.converters import (
     convert_to_opencode_metadata,
     to_claude_system_prompt,
     to_output_format,
+    to_request_usage,
+    to_run_usage,
     to_thinking_config,
 )
 from agentpool.agents.claude_code_agent.static_info import models_to_category
@@ -1212,24 +1213,11 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         # Build cost_info and usage from ResultMessage if available
         cost_info: TokenCost | None = None
         request_usage: RequestUsage | None = None
-        if result_message and result_message.usage:
-            usage_dict = result_message.usage
-            run_usage = RunUsage(
-                input_tokens=usage_dict["input_tokens"],
-                output_tokens=usage_dict["output_tokens"],
-                cache_read_tokens=usage_dict["cache_read_input_tokens"],
-                cache_write_tokens=usage_dict["cache_creation_input_tokens"],
-            )
-            total_cost = Decimal(str(result_message.total_cost_usd or 0))
+        if result_message:
+            run_usage = to_run_usage(result_message.usage)
+            total_cost = Decimal(str(result_message.total_cost_usd))
             cost_info = TokenCost(token_usage=run_usage, total_cost=total_cost)
-            # Also set usage for OpenCode compatibility
-            request_usage = RequestUsage(
-                input_tokens=usage_dict["input_tokens"],
-                output_tokens=usage_dict["output_tokens"],
-                cache_read_tokens=usage_dict["cache_read_input_tokens"],
-                cache_write_tokens=usage_dict["cache_creation_input_tokens"],
-            )
-
+            request_usage = to_request_usage(result_message.usage)
         # Determine finish reason - check if we were cancelled
         # Build metadata with file tracking and SDK session ID
         metadata = file_tracker.get_metadata()
