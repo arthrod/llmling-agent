@@ -25,10 +25,7 @@ from agentpool_config.nodes import BaseAgentConfig
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from clawd_code_sdk.models import (
-        AgentDefinition as CCAgentDefinition,
-        McpServerConfig,
-    )
+    from clawd_code_sdk.models import AgentDefinition as CCAgentDefinition, McpServerConfig
 
     from agentpool.agents.claude_code_agent import ClaudeCodeAgent
     from agentpool.common_types import AnyEventHandlerType
@@ -78,7 +75,7 @@ class AgentDefinition(Schema):
     model: Literal["sonnet", "opus", "haiku", "inherit"] | None = None
     """Model to use for the agent."""
 
-    memory: Literal["user", "project", "local"] | None = None
+    memory: SettingSource | None = None
     """Memory type for the agent."""
 
     disallowed_tools: list[str] | None = None
