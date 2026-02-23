@@ -586,16 +586,9 @@ class FSSpecTools(ResourceProvider):
             #     ]
             #   }
             # }
-
-            return ToolResult(
-                content=success_msg,  # Agent sees this (includes diagnostics text)
-                metadata={
-                    # Include file content for UI display (used by OpenCode TUI)
-                    "filePath": str(Path(path).absolute()),
-                    "content": content,
-                    # TODO: Add structured diagnostics here for UI
-                },
-            )
+            # TODO: Add structured diagnostics here for UI
+            meta = {"filePath": str(Path(path).absolute()), "content": content}
+            return ToolResult(content=success_msg, metadata=meta)  # Agent sees content
         except Exception as e:  # noqa: BLE001
             await agent_ctx.events.file_operation("write", path=path, success=False, error=str(e))
             return f"Error: Failed to write file {path}: {e}"
@@ -740,8 +733,6 @@ class FSSpecTools(ResourceProvider):
                 ("old_name()", "new_name()"),  # Update call sites
             ]
         """
-        from difflib import unified_diff
-
         from agentpool.tools.base import ToolResult
 
         path = self._resolve_path(path, agent_ctx)
@@ -799,38 +790,8 @@ class FSSpecTools(ResourceProvider):
             return error_msg
         else:
             # Ensure content ends with newline for proper diff formatting
-            original_for_diff = (
-                original_content if original_content.endswith("\n") else original_content + "\n"
-            )
-            new_for_diff = new_content if new_content.endswith("\n") else new_content + "\n"
-
-            diff_lines = unified_diff(
-                original_for_diff.splitlines(keepends=True),
-                new_for_diff.splitlines(keepends=True),
-                fromfile=f"a/{Path(path).name}",
-                tofile=f"b/{Path(path).name}",
-            )
-            diff = "".join(diff_lines)
-
-            # Count additions and deletions
-            original_lines = set(original_content.splitlines())
-            new_lines = set(new_content.splitlines())
-            additions = len(new_lines - original_lines)
-            deletions = len(original_lines - new_lines)
-
-            return ToolResult(
-                content=success_msg,
-                metadata={
-                    "diff": diff,
-                    "filediff": {
-                        "file": str(Path(path).absolute()),
-                        "before": original_content,
-                        "after": new_content,
-                        "additions": additions,
-                        "deletions": deletions,
-                    },
-                },
-            )
+            meta = to_opencode_edit_metadata(original_content, new_content, path)
+            return ToolResult(content=success_msg, metadata=meta)
 
     async def regex_replace_lines(
         self,
@@ -1623,6 +1584,35 @@ class FSSpecTools(ResourceProvider):
                     )
 
         return streamed_content
+
+
+def to_opencode_edit_metadata(original_content: str, new_content: str, path: str) -> dict[str, Any]:
+    from difflib import unified_diff
+
+    original_for_diff = (
+        original_content if original_content.endswith("\n") else original_content + "\n"
+    )
+    new_for_diff = new_content if new_content.endswith("\n") else new_content + "\n"
+
+    diff_lines = unified_diff(
+        original_for_diff.splitlines(keepends=True),
+        new_for_diff.splitlines(keepends=True),
+        fromfile=f"a/{Path(path).name}",
+        tofile=f"b/{Path(path).name}",
+    )
+    # Count additions and deletions
+    original_lines = set(original_content.splitlines())
+    new_lines = set(new_content.splitlines())
+    return {
+        "diff": "".join(diff_lines),
+        "filediff": {
+            "file": str(Path(path).absolute()),
+            "before": original_content,
+            "after": new_content,
+            "additions": len(new_lines - original_lines),
+            "deletions": len(original_lines - new_lines),
+        },
+    }
 
 
 def _build_create_prompt(path: str, description: str) -> str:
