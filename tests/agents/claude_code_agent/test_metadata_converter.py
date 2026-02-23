@@ -2,7 +2,18 @@
 
 from __future__ import annotations
 
+from typing import cast
+
+import pytest
+
 from agentpool.agents.claude_code_agent.converters import convert_to_opencode_metadata
+from agentpool_server.opencode_server.models.tool_metadata import (
+    BashMetadata,
+    EditMetadata,
+    ReadMetadata,
+    TodoMetadata,
+    WriteMetadata,
+)
 
 
 class TestConvertToolResultToOpencodeMetadata:
@@ -21,8 +32,10 @@ class TestConvertToolResultToOpencodeMetadata:
         metadata = convert_to_opencode_metadata("Write", sdk_result)
 
         assert metadata is not None
-        assert metadata["filePath"] == "/tmp/test/hello.py"
-        assert metadata["content"] == "def hello():\n    print('Hello')\n"
+        metadata = cast(WriteMetadata, metadata)
+        assert metadata["filepath"] == "/tmp/test/hello.py"
+        assert metadata["exists"] is True
+        assert metadata["diagnostics"] == {}
 
     def test_edit_tool_result(self) -> None:
         """Test conversion of Edit tool result."""
@@ -51,10 +64,11 @@ class TestConvertToolResultToOpencodeMetadata:
         metadata = convert_to_opencode_metadata("Edit", sdk_result)
 
         assert metadata is not None
-        assert "diff" in metadata
-        assert "filediff" in metadata
+        edit_meta = cast(EditMetadata, metadata)
+        assert "diff" in edit_meta
+        assert "filediff" in edit_meta
 
-        filediff = metadata["filediff"]
+        filediff = edit_meta["filediff"]
         assert filediff["file"] == "/tmp/test/hello.py"
         assert filediff["before"] == "def hello():\n    print('Hello')\n"
         assert '"""Say hello."""' in filediff["after"]
@@ -77,11 +91,11 @@ class TestConvertToolResultToOpencodeMetadata:
         metadata = convert_to_opencode_metadata("Read", sdk_result)
 
         assert metadata is not None
-        assert metadata["filePath"] == "/tmp/test/hello.py"
-        assert metadata["content"] == "def hello():\n    print('Hello')\n"
-        assert metadata["numLines"] == 2
-        assert metadata["startLine"] == 1
-        assert metadata["totalLines"] == 2
+        metadata = cast(ReadMetadata, metadata)
+
+        assert metadata["preview"] == "def hello():\n    print('Hello')"
+        assert metadata["truncated"] is False
+        assert metadata["loaded"] == []
 
     def test_bash_tool_result_success(self) -> None:
         """Test conversion of Bash tool success result."""
@@ -99,6 +113,7 @@ class TestConvertToolResultToOpencodeMetadata:
         metadata = convert_to_opencode_metadata("Bash", sdk_result, tool_input)
 
         assert metadata is not None
+        metadata = cast(BashMetadata, metadata)
         assert metadata["output"] == "Hello from bash"
         assert metadata["exit"] == 0
         assert metadata["description"] == "Print greeting"
@@ -116,6 +131,7 @@ class TestConvertToolResultToOpencodeMetadata:
         metadata = convert_to_opencode_metadata("Bash", sdk_result, tool_input)
 
         assert metadata is not None
+        metadata = cast(BashMetadata, metadata)
         assert "output line" in metadata["output"]
         assert "warning: something" in metadata["output"]
         assert metadata["description"] == "some_command"
@@ -130,8 +146,8 @@ class TestConvertToolResultToOpencodeMetadata:
         }
 
         metadata = convert_to_opencode_metadata("Bash", sdk_result)
-
         assert metadata is not None
+        metadata = cast(BashMetadata, metadata)
         assert metadata["exit"] is None  # Interrupted commands have no clean exit
 
     def test_bash_tool_result_error(self) -> None:
@@ -186,21 +202,24 @@ class TestConvertToolResultToOpencodeMetadata:
         metadata = convert_to_opencode_metadata("Edit", sdk_result)
 
         assert metadata is not None
+        metadata = cast(EditMetadata, metadata)
         assert metadata["filediff"]["before"] == ""
         # after is empty string when we can't compute it without originalFile
         assert metadata["filediff"]["after"] == ""
 
-    def test_write_with_missing_fields(self) -> None:
-        """Test Write conversion with missing fields returns None."""
-        # Missing filePath
+    def test_write_with_missing_filepath(self) -> None:
+        """Test Write conversion with missing filePath returns None."""
         sdk_result = {"content": "test"}
         metadata = convert_to_opencode_metadata("Write", sdk_result)
         assert metadata is None
 
-        # Missing content
+    def test_write_without_content_still_succeeds(self) -> None:
+        """Test Write conversion without content still succeeds (filepath is enough)."""
         sdk_result = {"filePath": "/tmp/test.py"}
         metadata = convert_to_opencode_metadata("Write", sdk_result)
-        assert metadata is None
+        assert metadata is not None
+        metadata = cast(WriteMetadata, metadata)
+        assert metadata["filepath"] == "/tmp/test.py"
 
     def test_read_with_missing_file_field(self) -> None:
         """Test Read conversion with missing file field returns None."""
@@ -235,6 +254,7 @@ class TestTodoWriteConversion:
         metadata = convert_to_opencode_metadata("TodoWrite", sdk_result)
 
         assert metadata is not None
+        metadata = cast(TodoMetadata, metadata)
         assert "todos" in metadata
         assert len(metadata["todos"]) == 2
 
@@ -242,7 +262,6 @@ class TestTodoWriteConversion:
         todo1 = metadata["todos"][0]
         assert todo1["content"] == "Fix critical bug"
         assert todo1["status"] == "pending"
-        assert "id" in todo1
         assert "priority" in todo1
 
         # Check second todo
@@ -264,6 +283,7 @@ class TestTodoWriteConversion:
         metadata = convert_to_opencode_metadata("TodoWrite", sdk_result)
 
         assert metadata is not None
+        metadata = cast(TodoMetadata, metadata)
         todos = metadata["todos"]
 
         # "Critical" keyword -> high
@@ -325,6 +345,7 @@ class TestStructuredPatchToDiff:
         metadata = convert_to_opencode_metadata("Edit", sdk_result)
 
         assert metadata is not None
+        metadata = cast(EditMetadata, metadata)
         diff = metadata["diff"]
 
         # Should contain unified diff header
@@ -333,3 +354,7 @@ class TestStructuredPatchToDiff:
         # Should contain the changes
         assert "-old" in diff
         assert "+new" in diff
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-vv"])
