@@ -71,9 +71,7 @@ from pydantic_ai import (
     ModelResponse,
     PartEndEvent,
     TextPart,
-    TextPartDelta,
     ThinkingPart,
-    ThinkingPartDelta,
     ToolCallPart,
     ToolCallPartDelta,
     ToolReturnPart,
@@ -868,7 +866,6 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             raise AgentNotInitializedError
         # Get pending parts from conversation (staged content)
         # Combine pending parts with new prompts, then join into single string for Claude SDK
-        #
         prompt_text = " ".join(str(p) for p in prompts)
         run_id = str(uuid.uuid4())
         assert self.session_id is not None  # Initialized by BaseAgent.run_stream()
@@ -1101,15 +1098,11 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
                             case RawContentBlockDeltaEvent(
                                 index=index, delta=TextDelta(text=text)
                             ) if text:
-                                text_delta = TextPartDelta(content_delta=text)
-                                yield PartDeltaEvent(index=index, delta=text_delta)
-
+                                yield PartDeltaEvent.text(index=index, content=text)
                             case RawContentBlockDeltaEvent(
                                 index=index, delta=ThinkingDelta(thinking=thinking)
                             ) if thinking:
-                                thinking_delta = ThinkingPartDelta(content_delta=thinking)
-                                yield PartDeltaEvent(index=index, delta=thinking_delta)
-
+                                yield PartDeltaEvent.thinking(index=index, content=thinking)
                             case RawContentBlockDeltaEvent(
                                 index=index, delta=InputJSONDelta(partial_json=partial_json)
                             ) if partial_json:
@@ -1299,38 +1292,39 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         """Handle permissions, model, and thinking_level mode switching."""
         from agentpool.agents.claude_code_agent.static_info import VALID_MODES
 
-        if category_id == "mode":
-            # Map mode_id to PermissionMode
-            if mode_id not in VALID_MODES:
-                raise UnknownModeError(mode_id, list(VALID_MODES))
-            permission_mode: PermissionMode = mode_id  # type: ignore[assignment]
-            self._permission_mode = permission_mode
-            if self._client:  # Update SDK client if initialized
-                await self.ensure_initialized()
-                await self._client.set_permission_mode(permission_mode)
-        elif category_id == "model":
-            # Validate model exists
-            if models := await self.get_available_models():
-                valid_ids = {m.id_override if m.id_override else m.id for m in models}
-                if mode_id not in valid_ids:
-                    raise UnknownModeError(mode_id, list(valid_ids))
-            # Set the model directly
-            self._model = mode_id
-            if self._client:
-                await self.ensure_initialized()
-                await self._client.set_model(mode_id)
-        elif category_id == "thought_level":
-            # Validate thinking mode
-            if mode_id not in THINKING_MODE_TOKENS:
-                raise UnknownModeError(mode_id, list(THINKING_MODE_TOKENS.keys()))
-            self._thinking_mode = mode_id  # type: ignore[assignment]
-            # Set thinking tokens via SDK
-            if self._client:
-                await self.ensure_initialized()
-                tokens = THINKING_MODE_TOKENS[self._thinking_mode]
-                await self._client.set_max_thinking_tokens(tokens)
-        else:
-            raise UnknownCategoryError(category_id)
+        match category_id:
+            case "mode":
+                # Map mode_id to PermissionMode
+                if mode_id not in VALID_MODES:
+                    raise UnknownModeError(mode_id, list(VALID_MODES))
+                permission_mode: PermissionMode = mode_id  # type: ignore[assignment]
+                self._permission_mode = permission_mode
+                if self._client:  # Update SDK client if initialized
+                    await self.ensure_initialized()
+                    await self._client.set_permission_mode(permission_mode)
+            case "model":
+                # Validate model exists
+                if models := await self.get_available_models():
+                    valid_ids = {m.id_override if m.id_override else m.id for m in models}
+                    if mode_id not in valid_ids:
+                        raise UnknownModeError(mode_id, list(valid_ids))
+                # Set the model directly
+                self._model = mode_id
+                if self._client:
+                    await self.ensure_initialized()
+                    await self._client.set_model(mode_id)
+            case "thought_level":
+                # Validate thinking mode
+                if mode_id not in THINKING_MODE_TOKENS:
+                    raise UnknownModeError(mode_id, list(THINKING_MODE_TOKENS.keys()))
+                self._thinking_mode = mode_id  # type: ignore[assignment]
+                # Set thinking tokens via SDK
+                if self._client:
+                    await self.ensure_initialized()
+                    tokens = THINKING_MODE_TOKENS[self._thinking_mode]
+                    await self._client.set_max_thinking_tokens(tokens)
+            case _:
+                raise UnknownCategoryError(category_id)
         await self.update_state(config_id=category_id, value_id=mode_id)
 
     async def list_sessions(
