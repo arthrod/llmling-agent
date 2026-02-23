@@ -261,7 +261,7 @@ def to_output_format(output_type: type) -> dict[str, Any] | None:
 def convert_to_opencode_metadata(  # noqa: PLR0911
     tool_name: str,
     tool_use_result: dict[str, Any] | str | None,
-    tool_input: ToolInput | dict[str, Any] | None = None,
+    tool_input: ToolInput | dict[str, Any],
 ) -> ToolMetadata | None:
     """Convert Claude Code SDK tool_use_result to OpenCode metadata format."""
     # Handle None or string results (bash errors come as plain strings)
@@ -287,25 +287,18 @@ def convert_to_opencode_metadata(  # noqa: PLR0911
             return None
 
 
-def _convert_write_result(result: WriteOutput) -> WriteMetadata | None:
+def _convert_write_result(result: WriteOutput) -> WriteMetadata:
     """Convert Write tool result to OpenCode metadata."""
-    file_path = result.get("filePath")
-    if not file_path:
-        return None
-    return WriteMetadata(filepath=file_path, exists=True, diagnostics={})
+    return WriteMetadata(filepath=result["filePath"], exists=True, diagnostics={})
 
 
-def _convert_edit_result(result: EditOutput) -> EditMetadata | None:
+def _convert_edit_result(result: EditOutput) -> EditMetadata:
     """Convert Edit tool result to OpenCode metadata."""
-    file_path = result.get("filePath")
-    original_file = result.get("originalFile")
-    old_string = result.get("oldString", "")
-    new_string = result.get("newString", "")
-    structured_patch = result.get("structuredPatch", [])
-
-    if not file_path:
-        return None
-
+    file_path = result["filePath"]
+    original_file = result["originalFile"]
+    old_string = result["oldString"]
+    new_string = result["newString"]
+    structured_patch = result["structuredPatch"]
     # Compute the "after" content by applying the edit
     after_content = original_file
     if original_file is not None and old_string and new_string:
@@ -325,72 +318,52 @@ def _convert_edit_result(result: EditOutput) -> EditMetadata | None:
     return EditMetadata(diff=diff, filediff=filediff, diagnostics={})
 
 
-def _convert_read_result(result: ReadOutput) -> ReadMetadata | None:
+def _convert_read_result(result: ReadOutput) -> ReadMetadata:
     """Convert Read tool result to OpenCode metadata."""
     # Only text reads have meaningful content for preview
-    if result.get("type") != "text":
+    if result["type"] != "text":
         return ReadMetadata(preview="", truncated=False, loaded=[])
-
     text_result = cast(ReadTextOutput, result)
-    file_info = text_result.get("file")
-    if not file_info:
-        return None
-
-    content: str = file_info.get("content", "")
+    file_info = text_result["file"]
+    content: str = file_info["content"]
     # Build preview from first ~20 lines
     lines = content.splitlines()
     preview = "\n".join(lines[:20])
-    num_lines: int = file_info.get("numLines", 0)
-    total_lines: int = file_info.get("totalLines", 0)
+    num_lines: int = file_info["numLines"]
+    total_lines: int = file_info["totalLines"]
     truncated = num_lines < total_lines if total_lines else False
     return ReadMetadata(preview=preview, truncated=truncated, loaded=[])
 
 
-def _convert_bash_result(result: BashOutput, tool_input: BashInput | None) -> BashMetadata:
+def _convert_bash_result(result: BashOutput, tool_input: BashInput) -> BashMetadata:
     """Convert Bash tool result to OpenCode metadata."""
-    stdout = result.get("stdout", "")
-    stderr = result.get("stderr", "")
+    stdout = result["stdout"]
+    stderr = result["stderr"]
     # Combine stdout and stderr
     output = stdout
     if stderr:
         output = f"{stdout}\n{stderr}" if stdout else stderr
     # Get description from tool input (Claude Code uses "description" field)
-    description = ""
-    if tool_input:
-        description = tool_input.get("description") or tool_input.get("command", "")
-
+    description = tool_input.get("description") or tool_input["command"]
     # Note: Claude Code SDK doesn't provide exit code in the success result structure,
     # it's only available in error strings. For successful commands, exit is 0.
     # The SDK result doesn't have an exit_code field, so we infer:
     # - If we got here with a dict result, the command likely succeeded (exit 0)
     # - Errors come as strings, not dicts
     exit_code: int | None = 0
-    if result.get("interrupted"):
+    if result["interrupted"]:
         exit_code = None  # Interrupted commands don't have a clean exit code
     return BashMetadata(output=output, exit=exit_code, description=description)
 
 
 def _convert_todowrite_result(result: TodoWriteOutput) -> TodoMetadata | None:
     """Convert TodoWrite tool result to OpenCode metadata."""
-    new_todos = result.get("newTodos", [])
-    if not new_todos:
-        return None
-
-    # Convert to OpenCode format, inferring priority
+    new_todos = result["newTodos"]
     todos: list[TodoInfo] = []
     for i, todo in enumerate(new_todos):
-        content = todo.get("content", "")
-        # Infer priority from position (first items = higher priority)
-        # or from content keywords
+        content = todo["content"]
         priority = _infer_priority(content, i, len(new_todos))
-        todos.append(
-            TodoInfo(
-                content=content,
-                status=todo.get("status", "pending"),
-                priority=priority,
-            )
-        )
-
+        todos.append(TodoInfo(content=content, status=todo["status"], priority=priority))
     return TodoMetadata(todos=todos)
 
 
