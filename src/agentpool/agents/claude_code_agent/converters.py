@@ -19,7 +19,6 @@ from clawd_code_sdk.models.output_types import (
     TodoWriteOutput,
     WriteOutput,
 )
-from pydantic import TypeAdapter
 from pydantic_ai import PartDeltaEvent, RequestUsage, RunUsage, TextPartDelta, ThinkingPartDelta
 
 from agentpool.agents.events import ToolCallCompleteEvent, ToolCallStartEvent
@@ -185,7 +184,7 @@ def claude_message_to_events(
                     events.append(event)
 
         case _:
-            # UserMessage, SystemMessage, ResultMessage - no events to emit
+            # UserMessage, InitSystemMessage, ResultMessage - no events to emit
             pass
 
     return events
@@ -244,17 +243,6 @@ def convert_mcp_servers_to_sdk_format(
         result[name] = cast(McpServerConfig, config)
 
     return result
-
-
-def to_output_format(output_type: type) -> dict[str, Any] | None:
-    """Convert to SDK output format dict."""
-    # Build structured output format if needed
-    output_format: dict[str, Any] | None = None
-    if output_type is not str:
-        adapter = TypeAdapter[Any](output_type)
-        schema = adapter.json_schema()
-        output_format = {"type": "json_schema", "schema": schema}
-    return output_format
 
 
 def convert_to_opencode_metadata(  # noqa: PLR0911

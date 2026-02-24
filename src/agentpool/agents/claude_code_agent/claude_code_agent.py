@@ -86,7 +86,6 @@ from agentpool.agents.claude_code_agent.converters import (
     convert_mcp_servers_to_sdk_format,
     convert_to_opencode_metadata,
     to_claude_system_prompt,
-    to_output_format,
     to_request_usage,
     to_run_usage,
     to_thinking_config,
@@ -504,6 +503,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             fork_session: Whether to fork the session
         """
         from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient
+        from clawd_code_sdk.models.options import NewSession, ResumeSession
 
         sys_prompt = to_claude_system_prompt(system_prompt) if system_prompt else None
         # Determine can_use_tool callback
@@ -521,6 +521,13 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         if self._use_subscription:
             # Force subscription usage by clearing API key
             env["ANTHROPIC_API_KEY"] = ""
+
+        # Build session config
+        session: NewSession | ResumeSession
+        if self._sdk_session_id:
+            session = ResumeSession(session_id=self._sdk_session_id, fork=fork_session)
+        else:
+            session = NewSession()
 
         opts = ClaudeAgentOptions(
             cwd=self.env.cwd,
@@ -540,13 +547,12 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             fallback_model=self._fallback_model,
             can_use_tool=can_use_tool,
             max_buffer_size=10 * 1024 * 1024,
-            output_format=to_output_format(self._output_type),
+            output_schema=self._output_type if self._output_type is not str else None,
             mcp_servers=self._mcp_servers or {},
             hooks=self._hook_manager.build_hooks(),  # type: ignore[arg-type]
             setting_sources=self._setting_sources,
             chrome="Chrome" in builtin_tools,
-            resume=self._sdk_session_id,
-            fork_session=fork_session,
+            session=session,
             stderr=lambda line: logger.debug("claude_cli_stderr", output=line),
         )
         return ClaudeSDKClient(opts)
@@ -837,9 +843,9 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         )
         from clawd_code_sdk import (
             AssistantMessage,
+            InitSystemMessage,
             Message,
             ResultMessage,
-            SystemMessage,
             TextBlock,
             ThinkingBlock,
             ToolResultBlock,
@@ -857,7 +863,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         #   if hasattr(message, 'subtype') and message.subtype == 'init':
         #       session_id = message.data.get('session_id')
         # The SDK manages its own session persistence. To resume, pass:
-        #   ClaudeAgentOptions(resume=session_id)
+        #   ClaudeAgentOptions(session=ResumeSession(session_id=session_id))
         # Conversation ID initialization handled by BaseAgent
 
         # Update input provider if provided
@@ -901,7 +907,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             # Capture SDK session ID from init message
             stream = client.receive_response()
             first_msg = await anext(stream)
-            assert isinstance(first_msg, SystemMessage | RateLimitMessage), (
+            assert isinstance(first_msg, InitSystemMessage | RateLimitMessage), (
                 f"invalid message type {type(first_msg)}"
             )
             self._sdk_session_id = first_msg.session_id
