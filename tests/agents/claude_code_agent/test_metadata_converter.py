@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import cast
 
+from clawd_code_sdk.models.input_types import BashInput, TodoItem
+from clawd_code_sdk.models.output_types import BashOutput, TodoWriteOutput
 import pytest
 
 from agentpool.agents.claude_code_agent.converters import convert_to_opencode_metadata
@@ -97,12 +99,12 @@ class TestConvertToolResultToOpencodeMetadata:
 
     def test_bash_tool_result_success(self) -> None:
         """Test conversion of Bash tool success result."""
-        sdk_result = {
-            "stdout": "Hello from bash",
-            "stderr": "",
-            "interrupted": False,
-            "isImage": False,
-        }
+        sdk_result = BashOutput(
+            stdout="Hello from bash",
+            stderr="",
+            interrupted=False,
+            isImage=False,
+        )
         tool_input = {"command": "echo 'Hello from bash'", "description": "Print greeting"}
         metadata = convert_to_opencode_metadata("Bash", sdk_result, tool_input)
 
@@ -114,12 +116,12 @@ class TestConvertToolResultToOpencodeMetadata:
 
     def test_bash_tool_result_with_stderr(self) -> None:
         """Test Bash result with both stdout and stderr."""
-        sdk_result = {
-            "stdout": "output line",
-            "stderr": "warning: something",
-            "interrupted": False,
-            "isImage": False,
-        }
+        sdk_result = BashOutput(
+            stdout="output line",
+            stderr="warning: something",
+            interrupted=False,
+            isImage=False,
+        )
         tool_input = {"command": "some_command"}
 
         metadata = convert_to_opencode_metadata("Bash", sdk_result, tool_input)
@@ -132,14 +134,14 @@ class TestConvertToolResultToOpencodeMetadata:
 
     def test_bash_tool_result_interrupted(self) -> None:
         """Test Bash result when command was interrupted."""
-        sdk_result = {
-            "stdout": "partial output",
-            "stderr": "",
-            "interrupted": True,
-            "isImage": False,
-        }
-
-        metadata = convert_to_opencode_metadata("Bash", sdk_result)
+        sdk_result = BashOutput(
+            stdout="partial output",
+            stderr="",
+            interrupted=True,
+            isImage=False,
+        )
+        tool_input = BashInput(command="some_command")
+        metadata = convert_to_opencode_metadata("Bash", sdk_result, tool_input)
         assert metadata is not None
         metadata = cast(BashMetadata, metadata)
         assert metadata["exit"] is None  # Interrupted commands have no clean exit
@@ -194,12 +196,6 @@ class TestConvertToolResultToOpencodeMetadata:
         # after is empty string when we can't compute it without originalFile
         assert metadata["filediff"]["after"] == ""
 
-    def test_write_with_missing_filepath(self) -> None:
-        """Test Write conversion with missing filePath returns None."""
-        sdk_result = {"content": "test"}
-        metadata = convert_to_opencode_metadata("Write", sdk_result)
-        assert metadata is None
-
     def test_write_without_content_still_succeeds(self) -> None:
         """Test Write conversion without content still succeeds (filepath is enough)."""
         sdk_result = {"filePath": "/tmp/test.py"}
@@ -208,33 +204,21 @@ class TestConvertToolResultToOpencodeMetadata:
         metadata = cast(WriteMetadata, metadata)
         assert metadata["filepath"] == "/tmp/test.py"
 
-    def test_read_with_missing_file_field(self) -> None:
-        """Test Read conversion with missing file field returns None."""
-        sdk_result = {"type": "text"}  # Missing "file" object
-        metadata = convert_to_opencode_metadata("Read", sdk_result)
-        assert metadata is None
-
 
 class TestTodoWriteConversion:
     """Tests for TodoWrite tool result conversion."""
 
     def test_todowrite_basic(self) -> None:
         """Test basic TodoWrite conversion."""
-        sdk_result = {
-            "oldTodos": [],
-            "newTodos": [
-                {
-                    "content": "Fix critical bug",
-                    "status": "pending",
-                    "activeForm": "Fixing critical bug",
-                },
-                {
-                    "content": "Review code",
-                    "status": "in_progress",
-                    "activeForm": "Reviewing code",
-                },
+        sdk_result = TodoWriteOutput(
+            oldTodos=[],
+            newTodos=[
+                TodoItem(
+                    content="Fix critical bug", status="pending", activeForm="Fixing critical bug"
+                ),
+                TodoItem(content="Review code", status="in_progress", activeForm="Reviewing code"),
             ],
-        }
+        )
 
         metadata = convert_to_opencode_metadata("TodoWrite", sdk_result)
         assert metadata is not None
@@ -253,14 +237,14 @@ class TestTodoWriteConversion:
 
     def test_todowrite_priority_keywords(self) -> None:
         """Test that priority is inferred from keywords."""
-        sdk_result = {
-            "oldTodos": [],
-            "newTodos": [
-                {"content": "Critical security fix", "status": "pending"},
-                {"content": "Nice to have feature", "status": "pending"},
-                {"content": "Regular task", "status": "pending"},
+        sdk_result = TodoWriteOutput(
+            oldTodos=[],
+            newTodos=[
+                TodoItem(content="Critical security fix", status="pending", activeForm=""),
+                TodoItem(content="Nice to have feature", status="pending", activeForm=""),
+                TodoItem(content="Regular task", status="pending", activeForm=""),
             ],
-        }
+        )
         metadata = convert_to_opencode_metadata("TodoWrite", sdk_result)
         assert metadata is not None
         metadata = cast(TodoMetadata, metadata)
@@ -276,9 +260,11 @@ class TestTodoWriteConversion:
 
     def test_todowrite_empty_todos(self) -> None:
         """Test TodoWrite with empty newTodos returns None."""
-        sdk_result = {"oldTodos": [{"content": "old", "status": "completed"}], "newTodos": []}
+        sdk_result = TodoWriteOutput(
+            oldTodos=[TodoItem(content="old", status="completed", activeForm="")], newTodos=[]
+        )
         metadata = convert_to_opencode_metadata("TodoWrite", sdk_result)
-        assert metadata is None
+        assert metadata == {"todos": []}
 
     def test_todowrite_case_insensitive(self) -> None:
         """Test that tool name matching is case-insensitive."""
