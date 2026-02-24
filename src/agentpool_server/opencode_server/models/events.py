@@ -26,6 +26,13 @@ class EmptyProperties(OpenCodeBaseModel):
     """Empty properties object."""
 
 
+class ServerHeartbeatEvent(OpenCodeBaseModel):
+    """Server heartbeat event - sent periodically to keep connections alive."""
+
+    type: Literal["server.heartbeat"] = Field(default="server.heartbeat", init=False)
+    properties: EmptyProperties = Field(default_factory=EmptyProperties)
+
+
 class ServerConnectedEvent(OpenCodeBaseModel):
     """Server connected event."""
 
@@ -211,6 +218,39 @@ class PartUpdatedEvent(OpenCodeBaseModel):
         return cls(properties=PartUpdatedEventProperties(part=part, delta=delta))
 
 
+class PartDeltaEventProperties(OpenCodeBaseModel):
+    """Properties for message part delta event."""
+
+    session_id: str
+    message_id: str
+    part_id: str
+    delta: str
+
+
+class PartDeltaEvent(OpenCodeBaseModel):
+    """Message part delta event - streaming text delta for a part."""
+
+    type: Literal["message.part.delta"] = Field(default="message.part.delta", init=False)
+    properties: PartDeltaEventProperties
+
+    @classmethod
+    def create(
+        cls,
+        session_id: str,
+        message_id: str,
+        part_id: str,
+        delta: str,
+    ) -> Self:
+        return cls(
+            properties=PartDeltaEventProperties(
+                session_id=session_id,
+                message_id=message_id,
+                part_id=part_id,
+                delta=delta,
+            )
+        )
+
+
 class MessageRemovedProperties(OpenCodeBaseModel):
     """Properties for message removed event."""
 
@@ -365,6 +405,60 @@ class PermissionResolvedEvent(OpenCodeBaseModel):
         return cls(properties=props)
 
 
+class PermissionUpdatedProperties(OpenCodeBaseModel):
+    """Properties for permission updated event."""
+
+    id: str
+    """Permission request ID."""
+
+    session_id: str
+    """Session ID."""
+
+    permission: str
+    """Tool/permission type name."""
+
+    patterns: list[str]
+    """Patterns for matching."""
+
+    metadata: dict[str, Any]
+    """Arbitrary metadata about the tool call."""
+
+    always: list[str]
+    """Patterns for 'always' approval."""
+
+    tool: PermissionToolInfo
+    """Tool call information."""
+
+
+class PermissionUpdatedEvent(OpenCodeBaseModel):
+    """Permission updated event - sent when permission status changes."""
+
+    type: Literal["permission.updated"] = Field(default="permission.updated", init=False)
+    properties: PermissionUpdatedProperties
+
+    @classmethod
+    def create(
+        cls,
+        session_id: str,
+        permission_id: str,
+        tool_name: str,
+        patterns: list[str],
+        metadata: dict[str, Any],
+        message_id: str = "",
+        call_id: str | None = None,
+    ) -> Self:
+        props = PermissionUpdatedProperties(
+            id=permission_id,
+            session_id=session_id,
+            permission=tool_name,
+            patterns=patterns,
+            metadata=metadata,
+            always=patterns,
+            tool=PermissionToolInfo(message_id=message_id, call_id=call_id),
+        )
+        return cls(properties=props)
+
+
 # =============================================================================
 # TUI Events - for external control of the TUI (e.g., VSCode extension)
 # =============================================================================
@@ -442,6 +536,23 @@ class TuiToastShowEvent(OpenCodeBaseModel):
             duration=duration,
         )
         return cls(properties=props)
+
+
+class TuiSessionSelectProperties(OpenCodeBaseModel):
+    """Properties for TUI session select event."""
+
+    session_id: str
+
+
+class TuiSessionSelectEvent(OpenCodeBaseModel):
+    """TUI session select event - navigates TUI to a specific session."""
+
+    type: Literal["tui.session.select"] = Field(default="tui.session.select", init=False)
+    properties: TuiSessionSelectProperties
+
+    @classmethod
+    def create(cls, session_id: str) -> Self:
+        return cls(properties=TuiSessionSelectProperties(session_id=session_id))
 
 
 # =============================================================================
@@ -759,6 +870,7 @@ class QuestionRejectedEvent(OpenCodeBaseModel):
 
 Event = (
     ServerConnectedEvent
+    | ServerHeartbeatEvent
     | SessionCreatedEvent
     | SessionUpdatedEvent
     | SessionDeletedEvent
@@ -768,9 +880,11 @@ Event = (
     | MessageUpdatedEvent
     | MessageRemovedEvent
     | PartUpdatedEvent
+    | PartDeltaEvent
     | PartRemovedEvent
     | PermissionRequestEvent
     | PermissionResolvedEvent
+    | PermissionUpdatedEvent
     | QuestionAskedEvent
     | QuestionRepliedEvent
     | QuestionRejectedEvent
@@ -788,4 +902,5 @@ Event = (
     | TuiPromptAppendEvent
     | TuiCommandExecuteEvent
     | TuiToastShowEvent
+    | TuiSessionSelectEvent
 )

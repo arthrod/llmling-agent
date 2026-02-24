@@ -68,6 +68,17 @@ async def list_agents(state: StateDep) -> list[Agent]:
     )
 
 
+@router.get("/skill")
+async def list_skills(state: StateDep) -> list[dict[str, Any]]:
+    """List all available skills.
+
+    Skills are specialized capabilities available to agents.
+    Currently returns an empty list as AgentPool doesn't have a skills system.
+    """
+    _ = state
+    return []
+
+
 @router.get("/command")
 async def list_commands(state: StateDep) -> list[Command]:
     """List available slash commands.
@@ -174,6 +185,98 @@ async def add_mcp_server(request: AddMCPServerRequest, state: StateDep) -> MCPSt
         raise HTTPException(status_code=500, detail=f"Failed to add MCP server: {e}") from e
 
 
+def _find_mcp_manager(state: Any) -> MCPManager | None:
+    """Find the MCPManager from the agent's tool providers."""
+    for provider in state.agent.tools.external_providers:
+        if isinstance(provider, MCPManager):
+            return provider
+        if isinstance(provider, AggregatingResourceProvider):
+            for nested in provider.providers:
+                if isinstance(nested, MCPManager):
+                    return nested
+    return None
+
+
+@router.post("/mcp/{name}/connect")
+async def connect_mcp_server(name: str, state: StateDep) -> bool:
+    """Connect (start) an MCP server by name.
+
+    Finds the server config and sets up the connection via MCPManager.
+    """
+    manager = _find_mcp_manager(state)
+    if manager is None:
+        raise HTTPException(status_code=400, detail="No MCP manager available")
+    # Find matching server config
+    config = next((s for s in manager.servers if s.client_id == name), None)
+    if config is None:
+        raise HTTPException(status_code=404, detail=f"MCP server not found: {name}")
+    try:
+        await manager.setup_server(config)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to connect: {e}") from e
+    else:
+        return True
+
+
+@router.post("/mcp/{name}/disconnect")
+async def disconnect_mcp_server(name: str, state: StateDep) -> bool:
+    """Disconnect (stop) an MCP server by name.
+
+    Removes the provider from the manager's active providers.
+    """
+    manager = _find_mcp_manager(state)
+    if manager is None:
+        raise HTTPException(status_code=400, detail="No MCP manager available")
+    # Find and remove the matching provider
+    provider = next((p for p in manager.providers if p.name.endswith(f"_{name}")), None)
+    if provider is None:
+        raise HTTPException(status_code=404, detail=f"MCP server not found: {name}")
+    try:
+        await provider.__aexit__(None, None, None)
+        manager.providers.remove(provider)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to disconnect: {e}") from e
+    else:
+        return True
+
+
+@router.post("/mcp/{name}/auth")
+async def start_mcp_auth(name: str, state: StateDep) -> dict[str, Any]:
+    """Start OAuth authentication flow for an MCP server.
+
+    Returns the authorization URL to open in a browser.
+    """
+    _ = state
+    # MCP OAuth is not yet supported in AgentPool's MCP implementation
+    raise HTTPException(status_code=501, detail=f"MCP OAuth not yet supported for: {name}")
+
+
+@router.post("/mcp/{name}/auth/callback")
+async def mcp_auth_callback(
+    name: str,
+    state: StateDep,
+    code: str | None = None,
+) -> MCPStatus:
+    """Complete OAuth authentication for an MCP server."""
+    _ = state, code
+    raise HTTPException(status_code=501, detail=f"MCP OAuth not yet supported for: {name}")
+
+
+@router.post("/mcp/{name}/auth/authenticate")
+async def mcp_auth_authenticate(name: str, state: StateDep) -> MCPStatus:
+    """Start OAuth flow and wait for callback (opens browser)."""
+    _ = state
+    raise HTTPException(status_code=501, detail=f"MCP OAuth not yet supported for: {name}")
+
+
+@router.delete("/mcp/{name}/auth")
+async def remove_mcp_auth(name: str, state: StateDep) -> dict[str, bool]:
+    """Remove OAuth credentials for an MCP server."""
+    _ = state
+    # Stub - no MCP OAuth credential storage yet
+    return {"success": True}
+
+
 @router.post("/log")
 async def log(request: LogRequest, state: StateDep) -> bool:
     """Write a log entry.
@@ -209,6 +312,45 @@ async def list_mcp_resources(state: StateDep) -> dict[str, McpResource]:
         return {}
     else:
         return result
+
+
+@router.get("/experimental/session")
+async def list_sessions_global(
+    state: StateDep,
+    directory: str | None = None,
+    roots: bool | None = None,
+    start: int | None = None,
+    cursor: int | None = None,
+    search: str | None = None,
+    limit: int | None = None,
+    archived: bool | None = None,
+) -> list[dict[str, Any]]:
+    """List sessions globally across all projects.
+
+    Supports pagination via cursor (timestamp-based).
+    """
+    from agentpool_server.opencode_server.converters import session_data_to_opencode
+
+    effective_limit = limit or 100
+    sessions = []
+    for data in await state.agent.list_sessions(cwd=directory or state.agent.env.cwd):
+        session = session_data_to_opencode(data)
+        sessions.append(session)
+    # Apply filters
+    if roots:
+        sessions = [s for s in sessions if s.parent_id is None]
+    if start is not None:
+        sessions = [s for s in sessions if s.time.updated >= start]
+    if cursor is not None:
+        sessions = [s for s in sessions if s.time.updated < cursor]
+    if search:
+        lower_search = search.lower()
+        sessions = [s for s in sessions if lower_search in s.title.lower()]
+    # Convert to global format (includes directory info)
+    result: list[dict[str, Any]] = [
+        s.model_dump(by_alias=True, exclude_none=True) for s in sessions[:effective_limit]
+    ]
+    return result
 
 
 @router.get("/experimental/tool/ids")
@@ -454,3 +596,54 @@ async def oauth_callback(
 
         return {"type": "pending", "message": "No token received yet"}
     raise HTTPException(status_code=404, detail=f"Unknown provider: {provider_id}")
+
+
+class AuthInfo(BaseModel):
+    """Authentication credential info."""
+
+    type: str = "api_key"
+    """Auth type (e.g., 'api_key', 'oauth')."""
+
+    token: str | None = None
+    """API key or access token."""
+
+    refresh: str | None = None
+    """Refresh token (for OAuth)."""
+
+    expires: int | None = None
+    """Token expiry timestamp."""
+
+
+@router.put("/auth/{provider_id}")
+async def set_auth(provider_id: str, info: AuthInfo, state: StateDep) -> bool:
+    """Set authentication credentials for a provider.
+
+    Stores the credentials so they can be used for subsequent API calls.
+    """
+    _ = state
+    # Store credentials based on provider type
+    if provider_id == "anthropic" and info.token:
+        store = AnthropicTokenStore()
+        from llmling_models.auth.anthropic_auth import AnthropicOAuthToken
+
+        token = AnthropicOAuthToken(
+            access_token=info.token,
+            refresh_token=info.refresh or "",
+            expires_at=info.expires or 0,
+        )
+        store.save(token)
+        return True
+    # For other providers, we'd need provider-specific storage
+    # For now, just acknowledge the request
+    return True
+
+
+@router.delete("/auth/{provider_id}")
+async def remove_auth(provider_id: str, state: StateDep) -> bool:
+    """Remove authentication credentials for a provider."""
+    _ = state
+    if provider_id == "anthropic":
+        store = AnthropicTokenStore()
+        store.clear()
+        return True
+    return True

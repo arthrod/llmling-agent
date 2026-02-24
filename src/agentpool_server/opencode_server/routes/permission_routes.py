@@ -2,16 +2,35 @@
 
 from __future__ import annotations
 
+from typing import Any, Literal
+
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from agentpool import log
 from agentpool_server.opencode_server.dependencies import StateDep
 from agentpool_server.opencode_server.models.events import PermissionResolvedEvent
-from agentpool_server.opencode_server.routes.session_routes import PermissionResponse
 
 
 router = APIRouter(prefix="/permission", tags=["permission"])
 logger = log.get_logger(__name__)
+
+
+class PermissionResponse(BaseModel):
+    """Request body for responding to a permission request."""
+
+    reply: Literal["once", "always", "reject"]
+    message: str | None = None
+    """Optional message to include with the reply."""
+
+
+@router.get("")
+async def list_permissions(state: StateDep) -> list[dict[str, Any]]:
+    """List all pending permission requests across all sessions."""
+    result: list[dict[str, Any]] = []
+    for input_provider in state.input_providers.values():
+        result.extend(input_provider.get_pending_permissions())
+    return result
 
 
 @router.post("/{permission_id}/reply")

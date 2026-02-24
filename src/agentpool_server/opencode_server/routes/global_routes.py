@@ -12,9 +12,11 @@ from sse_starlette.sse import EventSourceResponse
 from agentpool import log
 from agentpool_server.opencode_server.dependencies import StateDep
 from agentpool_server.opencode_server.models import (  # noqa: TC001
+    Config,
     Event,
     HealthResponse,
     ServerConnectedEvent,
+    ServerHeartbeatEvent,
 )
 
 
@@ -68,9 +70,16 @@ async def _event_generator(
         data = _serialize_event(connected, wrap_payload=wrap_payload)
         logger.info("SSE: Sending connected event", data=data)
         yield {"data": data}
-        # Stream events
+        # Stream events with heartbeat
+        heartbeat = ServerHeartbeatEvent()
         while True:
-            event = await queue.get()
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=10.0)
+            except TimeoutError:
+                # Send heartbeat every 10s to prevent stalled proxy streams
+                data = _serialize_event(heartbeat, wrap_payload=wrap_payload)
+                yield {"data": data}
+                continue
             data = _serialize_event(event, wrap_payload=wrap_payload)
             logger.info("SSE: Sending event", event_type=event.type)
             yield {"data": data}
@@ -83,6 +92,33 @@ async def _event_generator(
 async def get_global_events(state: StateDep) -> EventSourceResponse:
     """Get global events as SSE stream (uses payload wrapper)."""
     return EventSourceResponse(_event_generator(state, wrap_payload=True), sep="\n")
+
+
+@router.get("/global/config")
+async def get_global_config(state: StateDep) -> Config:
+    """Get global configuration."""
+    return state.config
+
+
+@router.patch("/global/config")
+async def update_global_config(state: StateDep, config: Config) -> Config:
+    """Update global configuration."""
+    state.config = config
+    return state.config
+
+
+@router.post("/global/dispose")
+async def global_dispose(state: StateDep) -> bool:
+    """Dispose all instances and release resources."""
+    await state.cleanup_tasks()
+    return True
+
+
+@router.post("/instance/dispose")
+async def instance_dispose(state: StateDep) -> bool:
+    """Dispose the current instance."""
+    await state.cleanup_tasks()
+    return True
 
 
 @router.get("/event")

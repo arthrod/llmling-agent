@@ -100,11 +100,23 @@ router = APIRouter(prefix="/session", tags=["session"])
 
 
 @router.get("")
-async def list_sessions(state: StateDep) -> list[Session]:
+async def list_sessions(
+    state: StateDep,
+    roots: bool | None = None,
+    start: int | None = None,
+    search: str | None = None,
+    limit: int | None = None,
+) -> list[Session]:
     """List all sessions from the agent.
 
     Delegates to agent.list_sessions() which handles fetching sessions
     from the appropriate storage (pool storage, Claude storage, ACP server, etc.).
+
+    Query params:
+        roots: Only return root sessions (no parentID)
+        start: Filter sessions updated on or after this timestamp (ms since epoch)
+        search: Filter sessions by title (case-insensitive)
+        limit: Maximum number of sessions to return
     """
     # Convert to OpenCode Session format and cache
     sessions: list[Session] = []
@@ -113,6 +125,16 @@ async def list_sessions(state: StateDep) -> list[Session]:
         # Cache in state for later use
         state.sessions[data.session_id] = session
         sessions.append(session)
+    # Apply filters
+    if roots:
+        sessions = [s for s in sessions if s.parent_id is None]
+    if start is not None:
+        sessions = [s for s in sessions if s.time.updated >= start]
+    if search:
+        lower_search = search.lower()
+        sessions = [s for s in sessions if lower_search in s.title.lower()]
+    if limit is not None:
+        sessions = sessions[:limit]
     return sessions
 
 
@@ -176,14 +198,20 @@ async def update_session(
     request: SessionUpdateRequest,
     state: StateDep,
 ) -> Session:
-    """Update session properties and persist changes."""
+    """Update session properties and persist changes.
+
+    Supports updating title and archiving via time.archived.
+    """
     session = await get_or_load_session(state, session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    updates: dict[str, Any] = {}
     if request.title is not None:
-        time_ = TimeCreatedUpdated(created=session.time.created, updated=now_ms())
-        session = session.model_copy(update={"title": request.title, "time": time_})
+        updates["title"] = request.title
+    # Always update the 'updated' timestamp
+    updates["time"] = TimeCreatedUpdated(created=session.time.created, updated=now_ms())
+    session = session.model_copy(update=updates)
     state.sessions[session_id] = session  # Update cache
     id_ = state.pool.manifest.config_file_path
     session_data = opencode_to_session_data(session, agent_name=state.agent.name, pool_id=id_)
@@ -213,6 +241,16 @@ async def delete_session(session_id: str, state: StateDep) -> bool:
     await state.storage.delete_session(session_id)
     await state.broadcast_event(SessionDeletedEvent.create(session_id))
     return True
+
+
+@router.get("/{session_id}/children")
+async def get_session_children(session_id: str, state: StateDep) -> list[Session]:
+    """Get all child sessions that were forked from the specified parent session."""
+    session = await get_or_load_session(state, session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    # Search all cached sessions for children
+    return [sess for sess in state.sessions.values() if sess.parent_id == session_id]
 
 
 @router.post("/{session_id}/abort")
@@ -555,9 +593,13 @@ async def run_shell_command(
 
 
 class PermissionResponse(OpenCodeBaseModel):
-    """Request body for responding to a permission request."""
+    """Request body for responding to a permission request (deprecated)."""
 
     reply: Literal["once", "always", "reject"]
+    message: str | None = None
+    """Optional message to include with the reply."""
+    response: dict[str, Any] | None = None
+    """Legacy field: OpenCode also accepts {response: {reply: ...}}."""
 
 
 @router.get("/{session_id}/permissions")

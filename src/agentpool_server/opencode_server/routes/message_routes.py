@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING, assert_never
+from typing import TYPE_CHECKING, Any, assert_never
 
 from fastapi import APIRouter, HTTPException, Query, status
 
@@ -22,6 +22,7 @@ from agentpool_server.opencode_server.models import (
     MessageTime,
     MessageUpdatedEvent,
     MessageWithParts,
+    PartRemovedEvent,
     PartUpdatedEvent,
     SessionIdleEvent,
     SessionStatus,
@@ -312,4 +313,57 @@ async def get_message(session_id: str, message_id: str, state: StateDep) -> Mess
         if msg.info.id == message_id:
             return msg
 
+    raise HTTPException(status_code=404, detail="Message not found")
+
+
+@router.delete("/message/{message_id}/part/{part_id}")
+async def delete_part(
+    session_id: str,
+    message_id: str,
+    part_id: str,
+    state: StateDep,
+) -> bool:
+    """Delete a part from a message."""
+    for msg in state.messages.get(session_id, []):
+        if msg.info.id != message_id:
+            continue
+        for i, part in enumerate(msg.parts):
+            if part.id == part_id:
+                msg.parts.pop(i)
+                await state.broadcast_event(
+                    PartRemovedEvent.create(
+                        session_id=session_id,
+                        message_id=message_id,
+                        part_id=part_id,
+                    )
+                )
+                return True
+        raise HTTPException(status_code=404, detail="Part not found")
+    raise HTTPException(status_code=404, detail="Message not found")
+
+
+@router.patch("/message/{message_id}/part/{part_id}")
+async def update_part(
+    session_id: str,
+    message_id: str,
+    part_id: str,
+    body: dict[str, Any],
+    state: StateDep,
+) -> dict[str, Any]:
+    """Update a part in a message.
+
+    Accepts the full part object and replaces the existing part.
+    Returns the updated part.
+    """
+    for msg in state.messages.get(session_id, []):
+        if msg.info.id != message_id:
+            continue
+        for i, part in enumerate(msg.parts):
+            if part.id == part_id:
+                # Update the part fields from the body
+                updated = part.model_copy(update=body)
+                msg.parts[i] = updated
+                await state.broadcast_event(PartUpdatedEvent.create(updated))
+                return updated.model_dump(by_alias=True, exclude_none=True)
+        raise HTTPException(status_code=404, detail="Part not found")
     raise HTTPException(status_code=404, detail="Message not found")
