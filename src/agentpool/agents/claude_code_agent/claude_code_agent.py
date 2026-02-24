@@ -525,7 +525,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         opts = ClaudeAgentOptions(
             cwd=self.env.cwd,
             allowed_tools=self._allowed_tools or [],
-            disallowed_tools=self._disallowed_tools or [],
+            disallowed_tools=self._disallowed_tools,
             system_prompt=sys_prompt,
             model=self._model,
             max_turns=self._max_turns,
