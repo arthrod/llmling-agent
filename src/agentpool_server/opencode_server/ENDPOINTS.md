@@ -308,7 +308,7 @@ All event types supported by the OpenCode protocol:
 | [x] | `session.status` | Session status changed (running/idle/error) |
 | [x] | `session.idle` | Session became idle (deprecated but used by TUI) |
 | [x] | `session.compacted` | Session context was compacted/summarized |
-| [ ] | `session.diff` | Session file diff updated |
+| [x] | `session.diff` | Session file diff updated |
 | [x] | `session.error` | Session encountered an error |
 | [x] | `message.updated` | Message created or updated |
 | [x] | `message.removed` | Message removed (during revert) |
@@ -322,11 +322,11 @@ All event types supported by the OpenCode protocol:
 | [x] | `question.replied` | Question answered |
 | [x] | `question.rejected` | Question rejected |
 | [x] | `todo.updated` | Todo list item updated |
-| [ ] | `file.edited` | File was edited |
+| [x] | `file.edited` | File was edited |
 | [x] | `file.watcher.updated` | File watcher detects project file changes |
 | [x] | `vcs.branch.updated` | VCS branch changed (polling-based) |
 | [ ] | `mcp.tools.changed` | MCP server tools changed |
-| [ ] | `command.executed` | Slash command executed |
+| [x] | `command.executed` | Slash command executed |
 | [x] | `tui.prompt.append` | Append text to TUI prompt input |
 | [x] | `tui.command.execute` | Execute a TUI command |
 | [x] | `tui.toast.show` | Show toast notification in TUI |

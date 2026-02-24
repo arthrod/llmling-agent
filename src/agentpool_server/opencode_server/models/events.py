@@ -773,6 +773,124 @@ class VcsBranchUpdatedProperties(OpenCodeBaseModel):
     """Current branch name, or None if detached HEAD."""
 
 
+# =============================================================================
+# Session Diff Events
+# =============================================================================
+
+
+class SessionDiffProperties(OpenCodeBaseModel):
+    """Properties for session diff event."""
+
+    session_id: str
+    diff: list[dict[str, Any]]
+
+
+class SessionDiffEvent(OpenCodeBaseModel):
+    """Session diff event - emitted when file diffs are computed (revert, summary)."""
+
+    type: Literal["session.diff"] = Field(default="session.diff", init=False)
+    properties: SessionDiffProperties
+
+    @classmethod
+    def create(cls, session_id: str, diff: list[dict[str, Any]]) -> Self:
+        return cls(properties=SessionDiffProperties(session_id=session_id, diff=diff))
+
+
+# =============================================================================
+# File Events
+# =============================================================================
+
+
+class FileEditedProperties(OpenCodeBaseModel):
+    """Properties for file edited event."""
+
+    file: str
+    """Absolute path to the edited file."""
+
+
+class FileEditedEvent(OpenCodeBaseModel):
+    """File edited event - emitted when a tool edits/writes/patches a file."""
+
+    type: Literal["file.edited"] = Field(default="file.edited", init=False)
+    properties: FileEditedProperties
+
+    @classmethod
+    def create(cls, file: str) -> Self:
+        return cls(properties=FileEditedProperties(file=file))
+
+
+# =============================================================================
+# MCP Events
+# =============================================================================
+
+
+class McpToolsChangedProperties(OpenCodeBaseModel):
+    """Properties for MCP tools changed event."""
+
+    server: str
+    """Name of the MCP server whose tools changed."""
+
+
+class McpToolsChangedEvent(OpenCodeBaseModel):
+    """MCP tools changed event - emitted when an MCP server's tool list changes.
+
+    TODO: Hook into MCP SDK's ToolListChangedNotification to emit this event.
+    OpenCode only emits this from the notification handler, not on connect/disconnect.
+    """
+
+    type: Literal["mcp.tools.changed"] = Field(default="mcp.tools.changed", init=False)
+    properties: McpToolsChangedProperties
+
+    @classmethod
+    def create(cls, server: str) -> Self:
+        return cls(properties=McpToolsChangedProperties(server=server))
+
+
+# =============================================================================
+# Command Events
+# =============================================================================
+
+
+class CommandExecutedProperties(OpenCodeBaseModel):
+    """Properties for command executed event."""
+
+    name: str
+    """Command name."""
+
+    session_id: str
+    """Session ID."""
+
+    arguments: str
+    """Command arguments."""
+
+    message_id: str
+    """ID of the message that resulted from the command."""
+
+
+class CommandExecutedEvent(OpenCodeBaseModel):
+    """Command executed event - emitted after a slash command runs."""
+
+    type: Literal["command.executed"] = Field(default="command.executed", init=False)
+    properties: CommandExecutedProperties
+
+    @classmethod
+    def create(
+        cls,
+        name: str,
+        session_id: str,
+        arguments: str,
+        message_id: str,
+    ) -> Self:
+        return cls(
+            properties=CommandExecutedProperties(
+                name=name,
+                session_id=session_id,
+                arguments=arguments,
+                message_id=message_id,
+            )
+        )
+
+
 class VcsBranchUpdatedEvent(OpenCodeBaseModel):
     """VCS branch updated event - sent when git branch changes."""
 
@@ -877,6 +995,8 @@ Event = (
     | SessionStatusEvent
     | SessionErrorEvent
     | SessionIdleEvent
+    | SessionDiffEvent
+    | SessionCompactedEvent
     | MessageUpdatedEvent
     | MessageRemovedEvent
     | PartUpdatedEvent
@@ -890,7 +1010,9 @@ Event = (
     | QuestionRejectedEvent
     | TodoUpdatedEvent
     | FileWatcherUpdatedEvent
-    | SessionCompactedEvent
+    | FileEditedEvent
+    | McpToolsChangedEvent
+    | CommandExecutedEvent
     | PtyCreatedEvent
     | PtyUpdatedEvent
     | PtyExitedEvent

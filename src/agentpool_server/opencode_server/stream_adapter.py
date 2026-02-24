@@ -45,6 +45,7 @@ from agentpool_server.opencode_server.models import (
     SessionErrorEvent,
     Tokens,
 )
+from agentpool_server.opencode_server.models.events import FileEditedEvent
 from agentpool_server.opencode_server.models.parts import (
     ReasoningPart,
     StepFinishPart,
@@ -413,8 +414,12 @@ class OpenCodeStreamAdapter:
                 case LocationContentItem(path=path):
                     file_paths.append(path)
 
-        if file_paths and self.on_file_paths is not None:
-            self.on_file_paths(file_paths)
+        if file_paths:
+            if self.on_file_paths is not None:
+                self.on_file_paths(file_paths)
+            # Emit file.edited for each file path (matches OpenCode's edit/write/patch tools)
+            for fp in file_paths:
+                yield FileEditedEvent.create(file=fp)
 
         if new_output:
             self._tool_outputs[tool_call_id] = self._tool_outputs.get(tool_call_id, "") + new_output

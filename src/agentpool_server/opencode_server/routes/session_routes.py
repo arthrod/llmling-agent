@@ -51,7 +51,11 @@ from agentpool_server.opencode_server.models import (
     Tokens,
 )
 from agentpool_server.opencode_server.models.base import OpenCodeBaseModel
-from agentpool_server.opencode_server.models.events import PermissionResolvedEvent
+from agentpool_server.opencode_server.models.events import (
+    CommandExecutedEvent,
+    PermissionResolvedEvent,
+    SessionDiffEvent,
+)
 
 
 if TYPE_CHECKING:
@@ -826,6 +830,21 @@ async def summarize_session(  # noqa: PLR0915
     # Mark session as idle
     state.session_status[session_id] = SessionStatus(type="idle")
     await state.broadcast_event(SessionStatusEvent.create(session_id, SessionStatus(type="idle")))
+
+    # Broadcast session.diff event after summarization
+    file_ops = state.pool.file_ops
+    diffs = [
+        {
+            "path": change.path,
+            "operation": change.operation,
+            "diff": change.to_unified_diff(),
+            "additions": change.to_unified_diff().count("\n+"),
+            "deletions": change.to_unified_diff().count("\n-"),
+        }
+        for change in file_ops.changes
+    ]
+    await state.broadcast_event(SessionDiffEvent.create(session_id, diffs))
+
     return assistant_msg_with_parts
 
 
@@ -960,6 +979,21 @@ async def revert_session(session_id: str, request: RevertRequest, state: StateDe
 
     # Broadcast session update
     await state.broadcast_event(SessionUpdatedEvent.create(updated_session))
+
+    # Broadcast session.diff event with current file diffs
+    file_ops = state.pool.file_ops
+    diffs = [
+        {
+            "path": change.path,
+            "operation": change.operation,
+            "diff": change.to_unified_diff(),
+            "additions": change.to_unified_diff().count("\n+"),
+            "deletions": change.to_unified_diff().count("\n-"),
+        }
+        for change in file_ops.changes
+    ]
+    await state.broadcast_event(SessionDiffEvent.create(session_id, diffs))
+
     return updated_session
 
 
@@ -1148,4 +1182,15 @@ async def execute_command(  # noqa: PLR0915
     # Mark session as idle
     state.session_status[session_id] = SessionStatus(type="idle")
     await state.broadcast_event(SessionStatusEvent.create(session_id, SessionStatus(type="idle")))
+
+    # Broadcast command.executed event
+    await state.broadcast_event(
+        CommandExecutedEvent.create(
+            name=request.command,
+            session_id=session_id,
+            arguments=request.arguments or "",
+            message_id=assistant_msg_id,
+        )
+    )
+
     return assistant_msg_with_parts
