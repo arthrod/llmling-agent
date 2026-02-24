@@ -200,8 +200,6 @@ def convert_mcp_servers_to_sdk_format(
     """
     from urllib.parse import urlparse
 
-    from clawd_code_sdk import McpServerConfig
-
     from agentpool_config.mcp_server import (
         SSEMCPServerConfig,
         StdioMCPServerConfig,

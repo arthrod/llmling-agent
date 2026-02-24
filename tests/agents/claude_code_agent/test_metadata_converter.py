@@ -89,10 +89,8 @@ class TestConvertToolResultToOpencodeMetadata:
         }
 
         metadata = convert_to_opencode_metadata("Read", sdk_result)
-
         assert metadata is not None
         metadata = cast(ReadMetadata, metadata)
-
         assert metadata["preview"] == "def hello():\n    print('Hello')"
         assert metadata["truncated"] is False
         assert metadata["loaded"] == []
@@ -105,11 +103,7 @@ class TestConvertToolResultToOpencodeMetadata:
             "interrupted": False,
             "isImage": False,
         }
-        tool_input = {
-            "command": "echo 'Hello from bash'",
-            "description": "Print greeting",
-        }
-
+        tool_input = {"command": "echo 'Hello from bash'", "description": "Print greeting"}
         metadata = convert_to_opencode_metadata("Bash", sdk_result, tool_input)
 
         assert metadata is not None
@@ -153,23 +147,18 @@ class TestConvertToolResultToOpencodeMetadata:
     def test_bash_tool_result_error(self) -> None:
         """Test that Bash error results (strings) return None."""
         sdk_result = "Error: Exit code 1\ncat: /nonexistent: No such file"
-
         metadata = convert_to_opencode_metadata("Bash", sdk_result)
-
         assert metadata is None
 
     def test_none_result(self) -> None:
         """Test that None tool_use_result returns None."""
         metadata = convert_to_opencode_metadata("Write", None)
-
         assert metadata is None
 
     def test_unknown_tool(self) -> None:
         """Test that unknown tools return None."""
         sdk_result = {"some": "data"}
-
         metadata = convert_to_opencode_metadata("UnknownTool", sdk_result)
-
         assert metadata is None
 
     def test_case_insensitive_tool_name(self) -> None:
@@ -198,9 +187,7 @@ class TestConvertToolResultToOpencodeMetadata:
             "userModified": False,
             "replaceAll": False,
         }
-
         metadata = convert_to_opencode_metadata("Edit", sdk_result)
-
         assert metadata is not None
         metadata = cast(EditMetadata, metadata)
         assert metadata["filediff"]["before"] == ""
@@ -224,9 +211,7 @@ class TestConvertToolResultToOpencodeMetadata:
     def test_read_with_missing_file_field(self) -> None:
         """Test Read conversion with missing file field returns None."""
         sdk_result = {"type": "text"}  # Missing "file" object
-
         metadata = convert_to_opencode_metadata("Read", sdk_result)
-
         assert metadata is None
 
 
@@ -252,18 +237,15 @@ class TestTodoWriteConversion:
         }
 
         metadata = convert_to_opencode_metadata("TodoWrite", sdk_result)
-
         assert metadata is not None
         metadata = cast(TodoMetadata, metadata)
         assert "todos" in metadata
         assert len(metadata["todos"]) == 2
-
         # Check first todo
         todo1 = metadata["todos"][0]
         assert todo1["content"] == "Fix critical bug"
         assert todo1["status"] == "pending"
         assert "priority" in todo1
-
         # Check second todo
         todo2 = metadata["todos"][1]
         assert todo2["content"] == "Review code"
@@ -279,13 +261,10 @@ class TestTodoWriteConversion:
                 {"content": "Regular task", "status": "pending"},
             ],
         }
-
         metadata = convert_to_opencode_metadata("TodoWrite", sdk_result)
-
         assert metadata is not None
         metadata = cast(TodoMetadata, metadata)
         todos = metadata["todos"]
-
         # "Critical" keyword -> high
         assert todos[0]["priority"] == "high"
         # "Nice to have" keyword -> low
@@ -297,22 +276,13 @@ class TestTodoWriteConversion:
 
     def test_todowrite_empty_todos(self) -> None:
         """Test TodoWrite with empty newTodos returns None."""
-        sdk_result = {
-            "oldTodos": [{"content": "old", "status": "completed"}],
-            "newTodos": [],
-        }
-
+        sdk_result = {"oldTodos": [{"content": "old", "status": "completed"}], "newTodos": []}
         metadata = convert_to_opencode_metadata("TodoWrite", sdk_result)
-
         assert metadata is None
 
     def test_todowrite_case_insensitive(self) -> None:
         """Test that tool name matching is case-insensitive."""
-        sdk_result = {
-            "oldTodos": [],
-            "newTodos": [{"content": "Task", "status": "pending"}],
-        }
-
+        sdk_result = {"oldTodos": [], "newTodos": [{"content": "Task", "status": "pending"}]}
         # All these should work
         assert convert_to_opencode_metadata("todowrite", sdk_result) is not None
         assert convert_to_opencode_metadata("TODOWRITE", sdk_result) is not None
@@ -341,13 +311,10 @@ class TestStructuredPatchToDiff:
             "userModified": False,
             "replaceAll": False,
         }
-
         metadata = convert_to_opencode_metadata("Edit", sdk_result)
-
         assert metadata is not None
         metadata = cast(EditMetadata, metadata)
         diff = metadata["diff"]
-
         # Should contain unified diff header
         assert "--- a/test.py" in diff
         assert "+++ b/test.py" in diff
