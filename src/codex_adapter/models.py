@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import os
+import sys
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -17,7 +17,7 @@ from codex_adapter.codex_types import (
 
 
 # Strict validation in tests to catch schema changes, lenient in production
-_IN_TESTS = bool(os.environ.get("PYTEST_CURRENT_TEST"))
+IS_DEV = "pytest" in sys.modules
 
 
 # ============================================================================
@@ -36,7 +36,7 @@ class CodexBaseModel(BaseModel):
     """
 
     model_config = ConfigDict(
-        extra="forbid" if _IN_TESTS else "ignore",
+        extra="forbid" if IS_DEV else "ignore",
         populate_by_name=True,
         alias_generator=to_camel,
     )
