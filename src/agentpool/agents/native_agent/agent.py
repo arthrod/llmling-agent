@@ -882,11 +882,6 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
             await self.update_state(config_id="mode", value_id=mode_id)
 
         elif category_id == "model":
-            # Validate model exists
-            if models := await self.get_available_models():
-                valid_ids = [m.pydantic_ai_id for m in models]
-                if mode_id not in valid_ids:
-                    raise UnknownModeError(mode_id, valid_ids)
             # Set the model directly
             self._model, settings = self._resolve_model_string(mode_id)
             if settings:

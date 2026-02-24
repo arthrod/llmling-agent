@@ -16,10 +16,7 @@ def _extract_from_zip(archive_path: Path, binary_name: str, dest_path: Path) -> 
                 continue
             if Path(member.filename).name != binary_name:
                 continue
-            with (
-                zip_ref.open(member, "r") as source,
-                dest_path.open("wb") as target,
-            ):
+            with zip_ref.open(member, "r") as source, dest_path.open("wb") as target:
                 shutil.copyfileobj(source, target)
             return dest_path
     raise FileNotFoundError(f"Binary {binary_name!r} not found in ZIP archive {archive_path!r}")
