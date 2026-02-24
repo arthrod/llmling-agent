@@ -14,7 +14,7 @@ from agentpool import AgentPool
 from agentpool.agents.acp_agent import ACPAgent
 from agentpool.agents.native_agent import Agent
 from agentpool.mcp_server.tool_bridge import ToolManagerBridge
-from agentpool.models.acp_agents.non_mcp import ClaudeACPAgentConfig
+from agentpool.models.acp_agents.base import ACPAgentConfig
 from agentpool_config.toolsets import SkillsToolsetConfig, SubagentToolsetConfig
 
 
@@ -104,7 +104,7 @@ async def test_acp_agent_toolsets_adds_providers():
     """Test that toolsets from config are added to ToolManager."""
     async with AgentPool() as pool:
         toolsets = [SubagentToolsetConfig(), SkillsToolsetConfig()]
-        config = ClaudeACPAgentConfig(name="test_acp", tools=toolsets)
+        config = ACPAgentConfig(name="test_acp", command="claude-code-acp", tools=toolsets)
         agent = ACPAgent.from_config(config, agent_pool=pool)
         await agent._setup_toolsets()
         # Check that providers were added

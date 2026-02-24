@@ -105,20 +105,23 @@ class BaseACPAgentConfig(BaseAgentConfig):
     auto_approve: bool = Field(default=False, title="Auto-approve permissions")
     """If True, automatically approve all permission requests from the remote agent."""
 
-    def get_command(self) -> str:
-        """Get the command to spawn the ACP server."""
-        raise NotImplementedError
+    def get_command(self) -> str | None:
+        """Get the command to spawn the ACP server.
+
+        Returns None for registry-based agents (resolved at runtime).
+        """
+        return None
 
     def get_args(self) -> list[str]:
-        """Get command arguments."""
-        raise NotImplementedError
+        """Get command arguments / extra args for registry agents."""
+        return []
+
+    def get_registry_id(self) -> str | None:
+        """Get the ACP registry agent ID, if this is a registry-based agent."""
+        return None
 
     def get_tool_providers(self) -> list[ResourceProvider]:
-        """Get all resource providers for this agent's tools.
-
-        Returns:
-            List of ResourceProvider instances
-        """
+        """Get all resource providers for this agent's tools."""
         from agentpool.resource_providers import StaticResourceProvider
         from agentpool.tools.base import Tool
 
@@ -219,3 +222,58 @@ class ACPAgentConfig(BaseACPAgentConfig):
     def get_args(self) -> list[str]:
         """Get command arguments."""
         return self.args
+
+
+class RegistryACPAgentConfig(BaseACPAgentConfig):
+    """Configuration for an ACP agent resolved from the ACP registry.
+
+    The agent binary/package is automatically installed and launched based on
+    the registry entry. Supports uvx, npx, and binary distributions.
+
+    Example:
+        ```yaml
+        agents:
+          coder:
+            type: acp
+            provider: registry
+            registry_id: goose
+            extra_args: ["--model", "gpt-4o"]
+            cwd: /path/to/project
+
+          gemini:
+            type: acp
+            provider: registry
+            registry_id: gemini
+            extra_args: ["--experimental-acp", "--model", "gemini-2.5-pro"]
+        ```
+    """
+
+    model_config = ConfigDict(json_schema_extra={"title": "Registry ACP Agent Configuration"})
+
+    provider: Literal["registry"] = Field("registry", init=False)
+    """Discriminator for registry-based ACP agent."""
+
+    registry_id: str = Field(
+        ...,
+        title="Registry Agent ID",
+        examples=["goose", "gemini", "claude-acp", "opencode", "codex-acp", "stakpak"],
+    )
+    """Agent ID in the ACP registry (https://agentclientprotocol.com)."""
+
+    extra_args: list[str] = Field(
+        default_factory=list,
+        title="Extra Arguments",
+        examples=[
+            ["--model", "gpt-4o"],
+            ["--experimental-acp", "--yolo"],
+        ],
+    )
+    """Extra CLI arguments appended after the registry-defined command."""
+
+    def get_registry_id(self) -> str:
+        """Get the ACP registry agent ID."""
+        return self.registry_id
+
+    def get_args(self) -> list[str]:
+        """Get extra arguments for the registry agent."""
+        return self.extra_args

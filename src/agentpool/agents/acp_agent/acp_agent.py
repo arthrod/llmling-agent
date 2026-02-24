@@ -117,9 +117,10 @@ class ACPAgent[TDeps = None](BaseAgent[TDeps, str]):
     def __init__(
         self,
         *,
-        # Required
-        command: str,
+        # Command (exactly one of command or registry_id must be set)
+        command: str | None = None,
         args: list[str] | None = None,
+        registry_id: str | None = None,
         # Identity
         name: str | None = None,
         description: str | None = None,
@@ -149,8 +150,15 @@ class ACPAgent[TDeps = None](BaseAgent[TDeps, str]):
     ) -> None:
         from agentpool.mcp_server.tool_bridge import ToolManagerBridge
 
+        if not command and not registry_id:
+            msg = "Exactly one of 'command' or 'registry_id' must be provided"
+            raise ValueError(msg)
+        if command and registry_id:
+            msg = "Exactly one of 'command' or 'registry_id' must be provided, not both"
+            raise ValueError(msg)
+
         super().__init__(
-            name=name or command,
+            name=name or command or registry_id,  # type: ignore[arg-type]
             description=description,
             deps_type=deps_type,
             display_name=display_name,
@@ -166,9 +174,10 @@ class ACPAgent[TDeps = None](BaseAgent[TDeps, str]):
         )
         # Permission handling
         self.auto_approve = auto_approve
-        # Command
+        # Command / registry
         self._command = command
         self._args = args or []
+        self._registry_id = registry_id
         # Environment
         self._cwd = cwd
         self._env_vars = env_vars or {}
@@ -215,6 +224,7 @@ class ACPAgent[TDeps = None](BaseAgent[TDeps, str]):
         return cls(
             command=config.get_command(),
             args=config.get_args(),
+            registry_id=config.get_registry_id(),
             # Identity
             name=config.name,
             description=config.description,
@@ -310,10 +320,25 @@ class ACPAgent[TDeps = None](BaseAgent[TDeps, str]):
         await self._cleanup()
         await super().__aexit__(exc_type, exc_val, exc_tb)
 
+    async def _resolve_command(self) -> list[str]:
+        """Resolve the command to run, either from explicit command or registry."""
+        if self._command:
+            return [self._command, *self._args]
+        # Registry-based resolution
+        assert self._registry_id is not None
+        from acp.registry import fetch_agent, prepare_agent
+
+        agent = await fetch_agent(self._registry_id)
+        if agent is None:
+            msg = f"Agent '{self._registry_id}' not found in ACP registry"
+            raise RuntimeError(msg)
+        # Merge registry env vars (agent-specific take precedence)
+        self._env_vars = {**agent.dist.env, **self._env_vars}
+        return await prepare_agent(agent, self._args)
+
     async def _start_process(self) -> Process:
         """Start the ACP server subprocess."""
-        args = self._args
-        cmd = [self._command, *args]
+        cmd = await self._resolve_command()
         self.log.info("Starting ACP subprocess", command=cmd)
         env = {**os.environ, **self._env_vars}
         cwd = str(self._cwd) if self._cwd else None
