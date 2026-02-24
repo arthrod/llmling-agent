@@ -6,6 +6,7 @@ import shutil
 from typing import TYPE_CHECKING
 
 from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient, tool
+from clawd_code_sdk.models.messages import ResultMessage
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 import pytest
@@ -261,7 +262,7 @@ async def test_claude_code_mcp_bridge_integration():
 
                 # Stream messages until we get a result
                 async for msg in client.receive_messages():
-                    if type(msg).__name__ == "ResultMessage":
+                    if isinstance(msg, ResultMessage):
                         break
 
                 if not captured_ids:

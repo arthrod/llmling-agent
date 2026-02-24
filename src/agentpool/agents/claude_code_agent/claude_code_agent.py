@@ -767,7 +767,13 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         Returns:
             A slashed Command that executes via Claude Code
         """
-        from clawd_code_sdk.models import AssistantMessage, ResultMessage, TextBlock, UserMessage
+        from clawd_code_sdk.models import (
+            AssistantMessage,
+            ResultErrorMessage,
+            ResultSuccessMessage,
+            TextBlock,
+            UserMessage,
+        )
         from slashed import Command
 
         name = cmd_info.name
@@ -801,11 +807,10 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
                     case UserMessage():
                         if parsed := msg.parse_command_output():
                             await ctx.print(parsed)
-                    case ResultMessage():
-                        if msg.result:
-                            await ctx.print(msg.result)
-                        if msg.is_error:
-                            await ctx.print(f"Error: {msg.subtype}")
+                    case ResultSuccessMessage(result=result) if result:
+                        await ctx.print(result)
+                    case ResultErrorMessage(subtype=subtype) if result:
+                        await ctx.print(f"Error: {subtype}")
 
         return Command.from_raw(
             execute_command,
