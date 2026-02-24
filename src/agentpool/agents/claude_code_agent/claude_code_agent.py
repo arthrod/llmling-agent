@@ -646,7 +646,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
 
         try:
             await self._client.connect()
-            await self.populate_commands()
+            await self._populate_commands()
             self.log.info("Claude Code client connected")
         except Exception:
             self.log.exception("Failed to connect Claude Code client")
@@ -735,7 +735,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             self._client = None
         await super().__aexit__(exc_type, exc_val, exc_tb)
 
-    async def populate_commands(self) -> None:
+    async def _populate_commands(self) -> None:
         """Populate the command store with slash commands from Claude Code.
 
         Fetches available commands from the connected Claude Code server
@@ -805,13 +805,14 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
                         for block in msg.content:
                             if isinstance(block, TextBlock):
                                 await ctx.print(block.text)
-                    case UserMessage():
-                        if parsed := msg.parse_command_output():
-                            await ctx.print(parsed)
+                    case UserMessage() if parsed := msg.parse_command_output():
+                        await ctx.print(parsed)
                     case ResultSuccessMessage(result=result) if result:
                         await ctx.print(result)
-                    case ResultErrorMessage(subtype=subtype) if result:
+                    case ResultErrorMessage(subtype=subtype, errors=errors):
                         await ctx.print(f"Error: {subtype}")
+                        if errors:
+                            await ctx.print(f"Errors: {errors}")
 
         return Command.from_raw(
             execute_command,
