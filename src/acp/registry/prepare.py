@@ -16,11 +16,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 from acp.registry.archive import extract_binary
-from acp.registry.model import (
-    BinaryDistribution,
-    NpxDistribution,
-    UvxDistribution,
-)
+from acp.registry.model import BinaryDistribution, NpxDistribution, UvxDistribution
 
 
 if TYPE_CHECKING:
@@ -44,8 +40,7 @@ def _prepare_npx(dist: NpxDistribution, extra_args: list[str]) -> list[str]:
     """Build command list for an npx/bunx distribution."""
     runner = _find_program("bunx", "npx")
     if runner is None:
-        msg = "Neither bunx nor npx found on PATH. Install bun or node."
-        raise RuntimeError(msg)
+        raise RuntimeError("Neither bunx nor npx found on PATH. Install bun or node.")
     base = [runner]
     if runner == "npx":
         base.append("-y")
@@ -55,8 +50,7 @@ def _prepare_npx(dist: NpxDistribution, extra_args: list[str]) -> list[str]:
 def _prepare_uvx(dist: UvxDistribution, extra_args: list[str]) -> list[str]:
     """Build command list for a uvx distribution."""
     if not shutil.which("uvx"):
-        msg = "uvx not found on PATH. Install uv."
-        raise RuntimeError(msg)
+        raise RuntimeError("uvx not found on PATH. Install uv.")
     return ["uvx", "--python", "3.13", dist.package, *dist.args, *extra_args]
 
 
@@ -112,11 +106,10 @@ async def prepare_agent(
         A command list suitable for ``subprocess.Popen`` / ``anyio.open_process``.
     """
     args = extra_args or []
-    dist = agent.dist
-    match dist:
-        case NpxDistribution():
+    match agent.dist:
+        case NpxDistribution() as dist:
             return _prepare_npx(dist, args)
-        case UvxDistribution():
+        case UvxDistribution() as dist:
             return _prepare_uvx(dist, args)
-        case BinaryDistribution():
+        case BinaryDistribution() as dist:
             return await _prepare_binary(dist, args, bin_dir)
