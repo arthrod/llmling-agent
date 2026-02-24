@@ -179,6 +179,8 @@ class CodexClient:
         Raises:
             CodexProcessError: If failed to start the process
         """
+        import agentpool
+
         if self._process is not None:
             return
 
@@ -206,7 +208,7 @@ class CodexClient:
         # Start reader task
         self._reader_task = asyncio.create_task(self._read_loop())
         # Initialize connection
-        client_info = ClientInfo(name="agentpool-codex-adapter", version="0.1.0")
+        client_info = ClientInfo(name="agentpool-codex-adapter", version=agentpool.__version__)
         init_params = InitializeParams(client_info=client_info)
         await self._send_request("initialize", init_params)
 
