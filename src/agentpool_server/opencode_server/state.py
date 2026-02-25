@@ -11,6 +11,10 @@ from typing import TYPE_CHECKING, Any
 
 from agentpool.diagnostics.lsp_manager import LSPManager
 from agentpool_server.opencode_server.models import Config
+from agentpool_server.opencode_server.provider_auth import (
+    ProviderAuthService,
+    create_default_auth_service,
+)
 
 
 if TYPE_CHECKING:
@@ -102,6 +106,9 @@ class ServerState:
 
     background_tasks: set[asyncio.Task[Any]] = field(default_factory=set)
     """Background tasks tracked for cleanup on shutdown."""
+
+    auth_service: ProviderAuthService = field(default_factory=create_default_auth_service)
+    """Provider authentication service."""
 
     def __post_init__(self) -> None:
         """Initialize derived state."""

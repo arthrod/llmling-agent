@@ -5,13 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException
-import httpx
-from llmling_models.auth.anthropic_auth import (
-    AnthropicTokenStore,
-    build_authorization_url,
-    exchange_code_for_token,
-    generate_pkce,
-)
 from pydantic import BaseModel, HttpUrl
 
 from agentpool.log import get_logger
@@ -462,8 +455,7 @@ async def list_tools_with_schemas(  # noqa: D417
         result = []
         for tool in await state.agent.tools.get_tools():
             # Extract parameters schema from the OpenAI function schema
-            schema = tool.schema
-            params = schema.get("function", {}).get("parameters", {})
+            params = tool.schema["function"]["parameters"]
             item = ToolListItem(id=tool.name, description=tool.description or "", parameters=params)
             result.append(item)
     except Exception:  # noqa: BLE001
@@ -503,19 +495,7 @@ async def get_provider_auth(state: StateDep) -> dict[str, list[ProviderAuthMetho
 
     Returns available OAuth providers with their auth methods.
     """
-    _ = state
-    return {
-        "anthropic": [
-            ProviderAuthMethod(type="oauth", label="Connect Claude Max/Pro"),
-        ],
-        "copilot": [
-            ProviderAuthMethod(type="oauth", label="Connect GitHub Copilot"),
-        ],
-    }
-
-
-# Store for active OAuth flows (in production, use Redis or similar)
-_oauth_flows: dict[str, dict[str, Any]] = {}
+    return state.auth_service.methods()
 
 
 @router.post("/provider/{provider_id}/oauth/authorize")
@@ -524,48 +504,10 @@ async def oauth_authorize(provider_id: str, state: StateDep) -> ProviderAuthAuth
 
     Returns URL and instructions for the user to complete authorization.
     """
-    _ = state
-
-    if provider_id == "anthropic":
-        verifier, challenge = generate_pkce()
-        auth_url = build_authorization_url(verifier, challenge)
-        # Store verifier for callback
-        _oauth_flows[f"anthropic:{verifier}"] = {"verifier": verifier}
-        return ProviderAuthAuthorization(
-            url=auth_url,
-            instructions="Sign in with your Anthropic account and copy the authorization code",
-            method="code",
-        )
-
-    if provider_id == "copilot":
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                "https://github.com/login/device/code",
-                headers={
-                    "accept": "application/json",
-                    "editor-version": "Neovim/0.6.1",
-                    "editor-plugin-version": "copilot.vim/1.16.0",
-                    "content-type": "application/json",
-                    "user-agent": "GithubCopilot/1.155.0",
-                },
-                json={"client_id": "Iv1.b507a08c87ecfe98", "scope": "read:user"},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-
-        device_code = data["device_code"]
-        user_code = data["user_code"]
-        verification_uri = data["verification_uri"]
-        # Store device_code for callback
-        _oauth_flows[f"copilot:{device_code}"] = {"device_code": device_code}
-
-        return ProviderAuthAuthorization(
-            url=verification_uri,
-            instructions=f"Enter code: {user_code}",
-            method="auto",
-        )
-
-    raise HTTPException(status_code=404, detail=f"Unknown provider: {provider_id}")
+    try:
+        return await state.auth_service.authorize(provider_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.post("/provider/{provider_id}/oauth/callback")
@@ -576,95 +518,30 @@ async def oauth_callback(
     device_code: str | None = None,
     verifier: str | None = None,
 ) -> bool:
-    """Handle OAuth callback/code exchange.
-
-    For Anthropic: exchanges authorization code for tokens.
-    For Copilot: polls for token using device code.
-    """
-    _ = state
-
-    if provider_id == "anthropic":
-        if not code or not verifier:
-            raise HTTPException(
-                status_code=400, detail="Missing code or verifier for Anthropic OAuth"
-            )
-
-        try:
-            token = exchange_code_for_token(code, verifier)
-            store = AnthropicTokenStore()
-            store.save(token)
-            # Clean up flow state
-            _oauth_flows.pop(f"anthropic:{verifier}", None)
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
-        else:
-            return True
-
-    if provider_id == "copilot":
-        if not device_code:
-            raise HTTPException(status_code=400, detail="Missing device_code for Copilot OAuth")
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                "https://github.com/login/oauth/access_token",
-                headers={
-                    "accept": "application/json",
-                    "editor-version": "Neovim/0.6.1",
-                    "editor-plugin-version": "copilot.vim/1.16.0",
-                    "content-type": "application/json",
-                    "user-agent": "GithubCopilot/1.155.0",
-                },
-                json={
-                    "client_id": "Iv1.b507a08c87ecfe98",
-                    "device_code": device_code,
-                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-                },
-            )
-            data = resp.json()
-
-        if "error" in data:
-            detail = data.get("error_description", data["error"])
-            raise HTTPException(status_code=400, detail=detail)
-
-        if data.get("access_token"):
-            # Clean up flow state
-            _oauth_flows.pop(f"copilot:{device_code}", None)
-            # TODO: Store copilot token
-            return True
-
-        raise HTTPException(status_code=400, detail="No token received")
-    raise HTTPException(status_code=404, detail=f"Unknown provider: {provider_id}")
+    """Handle OAuth callback/code exchange."""
+    try:
+        return await state.auth_service.callback(
+            provider_id, code=code, device_code=device_code, verifier=verifier
+        )
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.put("/auth/{provider_id}")
 async def set_auth(provider_id: str, info: AuthInfo, state: StateDep) -> bool:
-    """Set authentication credentials for a provider.
-
-    Stores the credentials so they can be used for subsequent API calls.
-    """
-    _ = state
-    # Store credentials based on provider type
-    if provider_id == "anthropic" and info.token:
-        store = AnthropicTokenStore()
-        from llmling_models.auth.anthropic_auth import AnthropicOAuthToken
-
-        token = AnthropicOAuthToken(
-            access_token=info.token,
-            refresh_token=info.refresh or "",
-            expires_at=info.expires or 0,
-        )
-        store.save(token)
-        return True
-    # For other providers, we'd need provider-specific storage
-    # For now, just acknowledge the request
-    return True
+    """Set authentication credentials for a provider."""
+    try:
+        return await state.auth_service.set_credentials(provider_id, info)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.delete("/auth/{provider_id}")
 async def remove_auth(provider_id: str, state: StateDep) -> bool:
     """Remove authentication credentials for a provider."""
-    _ = state
-    if provider_id == "anthropic":
-        store = AnthropicTokenStore()
-        store.clear()
-        return True
-    return True
+    try:
+        return await state.auth_service.remove_credentials(provider_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
