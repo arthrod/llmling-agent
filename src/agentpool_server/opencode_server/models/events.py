@@ -8,6 +8,7 @@ from pydantic import Field
 
 from agentpool_server.opencode_server.models.app import Project  # noqa: TC001
 from agentpool_server.opencode_server.models.base import OpenCodeBaseModel
+from agentpool_server.opencode_server.models.common import FileDiff  # noqa: TC001
 from agentpool_server.opencode_server.models.message import MessageInfo  # noqa: TC001
 from agentpool_server.opencode_server.models.parts import Part  # noqa: TC001
 from agentpool_server.opencode_server.models.pty import PtyInfo  # noqa: TC001
@@ -799,7 +800,7 @@ class SessionDiffProperties(OpenCodeBaseModel):
     """Properties for session diff event."""
 
     session_id: str
-    diff: list[dict[str, Any]]
+    diff: list[FileDiff]
 
 
 class SessionDiffEvent(OpenCodeBaseModel):
@@ -809,7 +810,7 @@ class SessionDiffEvent(OpenCodeBaseModel):
     properties: SessionDiffProperties
 
     @classmethod
-    def create(cls, session_id: str, diff: list[dict[str, Any]]) -> Self:
+    def create(cls, session_id: str, diff: list[FileDiff]) -> Self:
         return cls(properties=SessionDiffProperties(session_id=session_id, diff=diff))
 
 

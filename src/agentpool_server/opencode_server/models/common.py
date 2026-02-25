@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Literal, Self
 
 from pydantic import Field
 
@@ -12,6 +12,8 @@ from agentpool_server.opencode_server.models.base import OpenCodeBaseModel
 
 if TYPE_CHECKING:
     from pydantic_ai.usage import UsageBase
+
+    from agentpool.utils.streams import FileChange
 
 
 class TimeCreatedUpdated(OpenCodeBaseModel):
@@ -94,3 +96,31 @@ class FileDiff(OpenCodeBaseModel):
     after: str
     additions: int
     deletions: int
+    status: Literal["added", "deleted", "modified"] | None = None
+
+    @classmethod
+    def from_file_change(cls, change: FileChange) -> Self:
+        """Create a FileDiff from a FileChange."""
+        before = change.old_content or ""
+        after = change.new_content or ""
+        diff_text = change.to_unified_diff()
+        additions = diff_text.count("\n+")
+        deletions = diff_text.count("\n-")
+        op = change.operation
+        status: Literal["added", "deleted", "modified"] | None
+        if op == "create":
+            status = "added"
+        elif op == "delete":
+            status = "deleted"
+        elif op in ("edit", "write"):
+            status = "modified"
+        else:
+            status = None
+        return cls(
+            file=change.path,
+            before=before,
+            after=after,
+            additions=additions,
+            deletions=deletions,
+            status=status,
+        )

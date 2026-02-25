@@ -24,6 +24,7 @@ from agentpool_server.opencode_server.input_provider import OpenCodeInputProvide
 from agentpool_server.opencode_server.models import (
     AssistantMessage,
     CommandRequest,
+    FileDiff,
     MessagePath,
     MessageTime,
     MessageUpdatedEvent,
@@ -490,7 +491,7 @@ async def get_session_diff(
     session_id: str,
     state: StateDep,
     message_id: str | None = None,
-) -> list[dict[str, Any]]:
+) -> list[FileDiff]:
     """Get file diffs for a session.
 
     Returns a list of file changes with unified diffs.
@@ -505,18 +506,7 @@ async def get_session_diff(
         return []
     # Optionally filter by message_id
     changes = file_ops.get_changes_since_message(message_id) if message_id else file_ops.changes
-    # Format as list of diffs
-    return [
-        {
-            "path": change.path,
-            "operation": change.operation,
-            "diff": change.to_unified_diff(),
-            "timestamp": change.timestamp,
-            "agent_name": change.agent_name,
-            "message_id": change.message_id,
-        }
-        for change in changes
-    ]
+    return [FileDiff.from_file_change(change) for change in changes]
 
 
 @router.post("/{session_id}/shell")
@@ -827,16 +817,7 @@ async def summarize_session(  # noqa: PLR0915
 
     # Broadcast session.diff event after summarization
     file_ops = state.pool.file_ops
-    diffs = [
-        {
-            "path": change.path,
-            "operation": change.operation,
-            "diff": change.to_unified_diff(),
-            "additions": change.to_unified_diff().count("\n+"),
-            "deletions": change.to_unified_diff().count("\n-"),
-        }
-        for change in file_ops.changes
-    ]
+    diffs = [FileDiff.from_file_change(change) for change in file_ops.changes]
     await state.broadcast_event(SessionDiffEvent.create(session_id, diffs))
 
     return assistant_msg_with_parts
@@ -976,16 +957,7 @@ async def revert_session(session_id: str, request: RevertRequest, state: StateDe
 
     # Broadcast session.diff event with current file diffs
     file_ops = state.pool.file_ops
-    diffs = [
-        {
-            "path": change.path,
-            "operation": change.operation,
-            "diff": change.to_unified_diff(),
-            "additions": change.to_unified_diff().count("\n+"),
-            "deletions": change.to_unified_diff().count("\n-"),
-        }
-        for change in file_ops.changes
-    ]
+    diffs = [FileDiff.from_file_change(change) for change in file_ops.changes]
     await state.broadcast_event(SessionDiffEvent.create(session_id, diffs))
 
     return updated_session
