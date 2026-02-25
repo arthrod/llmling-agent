@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
     from agentpool.utils.streams import FileChange
 
+FileDiffStatus = Literal["added", "deleted", "modified"]
+
 
 class TimeCreatedUpdated(OpenCodeBaseModel):
     """Timestamp with created and updated fields (milliseconds)."""
@@ -96,19 +98,15 @@ class FileDiff(OpenCodeBaseModel):
     after: str
     additions: int
     deletions: int
-    status: Literal["added", "deleted", "modified"] | None = None
+    status: FileDiffStatus | None = None
 
     @classmethod
     def from_file_change(cls, change: FileChange) -> Self:
         """Create a FileDiff from a FileChange."""
-        before = change.old_content or ""
-        after = change.new_content or ""
         diff_text = change.to_unified_diff()
-        additions = diff_text.count("\n+")
-        deletions = diff_text.count("\n-")
         match change.operation:
             case "create":
-                status: Literal["added", "deleted", "modified"] | None = "added"
+                status: FileDiffStatus | None = "added"
             case "delete":
                 status = "deleted"
             case "edit" | "write":
@@ -117,9 +115,9 @@ class FileDiff(OpenCodeBaseModel):
                 status = None
         return cls(
             file=change.path,
-            before=before,
-            after=after,
-            additions=additions,
-            deletions=deletions,
+            before=change.old_content or "",
+            after=change.new_content or "",
+            additions=diff_text.count("\n+"),
+            deletions=diff_text.count("\n-"),
             status=status,
         )

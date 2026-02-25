@@ -19,7 +19,10 @@ from __future__ import annotations
 
 from typing import Any, Literal, NotRequired, TypedDict
 
+from agentpool_server.opencode_server.models.common import FileDiffStatus  # noqa: TC001
 
+
+ChangeType = Literal["add", "update", "delete", "move"]
 # ---------------------------------------------------------------------------
 # Common / shared sub-types
 # ---------------------------------------------------------------------------
@@ -65,7 +68,7 @@ class FileDiff(TypedDict):
     after: str
     additions: int
     deletions: int
-    status: NotRequired[Literal["added", "deleted", "modified"]]
+    status: NotRequired[FileDiffStatus]
 
 
 class TruncationFields(TypedDict, total=False):
@@ -328,7 +331,7 @@ class ApplyPatchFileInfo(TypedDict):
     """Absolute path to the file."""
     relativePath: str
     """Path relative to the worktree root."""
-    type: Literal["add", "update", "delete", "move"]
+    type: ChangeType
     """The type of change applied."""
     diff: str
     """Unified diff string for this file."""

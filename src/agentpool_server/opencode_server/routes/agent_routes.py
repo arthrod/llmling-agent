@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException
 import httpx
@@ -40,7 +40,7 @@ from agentpool_server.opencode_server.models import (
     WorktreeResetRequest,
 )
 from agentpool_server.opencode_server.models.diagnostics import FormatterStatus
-from agentpool_server.opencode_server.models.events import LspStatus
+from agentpool_server.opencode_server.models.events import ConnectionStatus, LspStatus
 
 
 if TYPE_CHECKING:
@@ -482,7 +482,7 @@ async def get_lsp_status(state: StateDep) -> list[LspStatus]:
     """
     servers: list[LspStatus] = []
     for server_id, server_state in state.lsp_manager._servers.items():
-        status: Literal["connected", "error"] = "connected" if server_state.initialized else "error"
+        status: ConnectionStatus = "connected" if server_state.initialized else "error"
         servers.append(
             LspStatus(id=server_id, name=server_id, status=status, root=server_state.root_uri or "")
         )

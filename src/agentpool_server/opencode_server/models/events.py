@@ -24,6 +24,9 @@ from agentpool_server.opencode_server.models.session import (  # noqa: TC001
 
 
 Variant = Literal["info", "success", "warning", "error"]
+TodoPriority = Literal["high", "medium", "low"]
+FileUpdateEvent = Literal["add", "change", "unlink"]
+ConnectionStatus = Literal["connected", "error"]
 
 
 class EmptyProperties(OpenCodeBaseModel):
@@ -590,7 +593,7 @@ class Todo(OpenCodeBaseModel):
     status: Literal["pending", "in_progress", "completed", "cancelled"]
     """Current status: pending, in_progress, completed, cancelled."""
 
-    priority: Literal["high", "medium", "low"]
+    priority: TodoPriority
     """Priority level: high, medium, low."""
 
 
@@ -623,7 +626,7 @@ class FileWatcherUpdatedProperties(OpenCodeBaseModel):
     file: str
     """Absolute path to the file that changed."""
 
-    event: Literal["add", "change", "unlink"]
+    event: FileUpdateEvent
     """Type of change: add (created), change (modified), unlink (deleted)."""
 
 
@@ -634,7 +637,7 @@ class FileWatcherUpdatedEvent(OpenCodeBaseModel):
     properties: FileWatcherUpdatedProperties
 
     @classmethod
-    def create(cls, file: str, event: Literal["add", "change", "unlink"]) -> Self:
+    def create(cls, file: str, event: FileUpdateEvent) -> Self:
         return cls(properties=FileWatcherUpdatedProperties(file=file, event=event))
 
 
@@ -735,7 +738,7 @@ class LspStatus(OpenCodeBaseModel):
     root: str
     """Relative workspace root path."""
 
-    status: Literal["connected", "error"]
+    status: ConnectionStatus
     """Connection status."""
 
 

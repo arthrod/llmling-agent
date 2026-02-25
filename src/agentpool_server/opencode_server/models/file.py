@@ -7,6 +7,7 @@ from typing import Literal, Self
 from pydantic import BaseModel, Field
 
 from agentpool_server.opencode_server.models.base import OpenCodeBaseModel
+from agentpool_server.opencode_server.models.common import FileDiffStatus  # noqa: TC001
 
 
 class FileNode(OpenCodeBaseModel):
@@ -30,7 +31,7 @@ class FileStatus(OpenCodeBaseModel):
     """File status (for VCS)."""
 
     path: str
-    status: Literal["added", "deleted", "modified"]
+    status: FileDiffStatus
 
 
 class TextWrapper(OpenCodeBaseModel):

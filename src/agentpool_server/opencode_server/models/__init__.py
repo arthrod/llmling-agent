@@ -8,6 +8,7 @@ All models inherit from OpenCodeBaseModel which provides:
 from agentpool_server.opencode_server.models.base import OpenCodeBaseModel
 from agentpool_server.opencode_server.models.common import (
     FileDiff,
+    FileDiffStatus,
     ModelRef,
     TimeCreated,
     TimeCreatedUpdated,
@@ -204,6 +205,7 @@ __all__ = [
     "Event",
     "FileContent",
     "FileDiff",
+    "FileDiffStatus",
     "FileEditedEvent",
     "FileNode",
     "FilePart",

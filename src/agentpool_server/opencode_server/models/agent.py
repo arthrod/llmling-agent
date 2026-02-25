@@ -10,15 +10,19 @@ from agentpool_server.opencode_server.models.base import OpenCodeBaseModel
 from agentpool_server.opencode_server.models.common import ModelRef  # noqa: TC001
 
 
+PermissionBehavior = Literal["ask", "allow", "deny"]
+AgentMode = Literal["subagent", "primary", "all"]
+
+
 class AgentPermission(OpenCodeBaseModel):
     """Agent permission settings."""
 
-    edit: Literal["ask", "allow", "deny"] = "ask"
-    bash: dict[str, Literal["ask", "allow", "deny"]] = Field(default_factory=dict)
-    skill: dict[str, Literal["ask", "allow", "deny"]] = Field(default_factory=dict)
-    webfetch: Literal["ask", "allow", "deny"] | None = None
-    doom_loop: Literal["ask", "allow", "deny"] | None = None
-    external_directory: Literal["ask", "allow", "deny"] | None = None
+    edit: PermissionBehavior = "ask"
+    bash: dict[str, PermissionBehavior] = Field(default_factory=dict)
+    skill: dict[str, PermissionBehavior] = Field(default_factory=dict)
+    webfetch: PermissionBehavior | None = None
+    doom_loop: PermissionBehavior | None = None
+    external_directory: PermissionBehavior | None = None
 
 
 class Agent(OpenCodeBaseModel):
@@ -26,7 +30,7 @@ class Agent(OpenCodeBaseModel):
 
     name: str
     description: str | None = None
-    mode: Literal["subagent", "primary", "all"] = "primary"
+    mode: AgentMode = "primary"
     native: bool | None = None
     hidden: bool | None = None
     default: bool | None = None

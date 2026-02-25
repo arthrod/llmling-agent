@@ -13,6 +13,10 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 
+TodoPriority = Literal["high", "medium", "low"]
+TodoStatus = Literal["pending", "in_progress", "completed"]
+
+
 @asynccontextmanager
 async def merge_queue_into_iterator[T, V](  # noqa: PLR0915
     primary_stream: AsyncIterator[T],
@@ -407,14 +411,6 @@ class FileOpsTracker:
             ],
             "modified_paths": sorted(self.get_modified_paths()),
         }
-
-
-# =============================================================================
-# Todo/Plan Tracking
-# =============================================================================
-
-TodoPriority = Literal["high", "medium", "low"]
-TodoStatus = Literal["pending", "in_progress", "completed"]
 
 
 @dataclass
