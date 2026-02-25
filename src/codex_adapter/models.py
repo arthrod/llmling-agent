@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -86,7 +86,7 @@ class InitializeParams(CodexBaseModel):
     client_info: ClientInfo
 
     @classmethod
-    def create(cls, name: str, version: str):
+    def create(cls, name: str, version: str) -> Self:
         return cls(client_info=ClientInfo(name=name, version=version))
 
 
