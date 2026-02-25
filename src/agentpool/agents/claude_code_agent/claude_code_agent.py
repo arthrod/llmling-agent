@@ -908,37 +908,8 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
                                             yield tool_start_event
                                         # Clean up from accumulator (always, both branches)
                                         tool_accumulator.complete(tc_id)
-                                    case ToolResultBlock(tool_use_id=tc_id, content=content):
-                                        # Tool result received - flush response parts & add request
-                                        if current_response_parts:
-                                            response = ModelResponse(parts=current_response_parts)
-                                            model_messages.append(response)
-                                            current_response_parts = []
-                                        # Get tool name from pending calls
-                                        tool_use = pending_tool_calls.pop(tc_id)
-                                        tool_name = _strip_mcp_prefix(tool_use.name)
-                                        tool_input = (
-                                            cast(dict[str, Any], tool_use.input) if tool_use else {}
-                                        )
-                                        # Create ToolReturnPart for the result
-                                        return_part = ToolReturnPart(
-                                            tool_name=tool_name,
-                                            content=content,
-                                            tool_call_id=tc_id,
-                                        )
-                                        yield FunctionToolResultEvent(result=return_part)
-                                        yield ToolCallCompleteEvent(
-                                            tool_name=tool_name,
-                                            tool_call_id=tc_id,
-                                            tool_input=tool_input,
-                                            tool_result=content,
-                                            agent_name=self.name,
-                                            message_id="",
-                                            metadata=tool_metadata.get(tc_id),
-                                        )
-                                        # Add tool return as ModelRequest
-                                        model_messages.append(ModelRequest(parts=[return_part]))
-
+                                    case ToolResultBlock():
+                                        pass  # ToolResult Blocks only appear in UserMessages
                         # Process user messages - may contain tool results
                         case UserMessage(content=user_content):
                             user_blocks = (

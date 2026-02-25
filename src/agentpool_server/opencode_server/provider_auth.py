@@ -222,8 +222,7 @@ class CopilotAuthBackend(ProviderAuthBackend):
             # TODO: Store copilot token via Auth.set equivalent
             return True
 
-        msg = "No token received"
-        raise ValueError(msg)
+        raise ValueError("No token received")
 
 
 @dataclass
