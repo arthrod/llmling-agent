@@ -176,18 +176,14 @@ async def add_mcp_server(request: AddMCPServerRequest, state: StateDep) -> MCPSt
         raise HTTPException(status_code=400, detail=detail)
 
     # Find the MCPManager and add the server
-    manager: MCPManager | None = None
     for provider in state.agent.tools.external_providers:
         match provider:
+            case AggregatingResourceProvider():
+                manager = next((i for i in provider.providers if isinstance(i, MCPManager)), None)
             case MCPManager():
                 manager = provider
-                break
-            case AggregatingResourceProvider():
-                for nested in provider.providers:
-                    if isinstance(nested, MCPManager):
-                        manager = nested
-                        break
-
+            case _:
+                manager = None
     if manager is None:
         raise HTTPException(status_code=400, detail="No MCP manager available")
 
