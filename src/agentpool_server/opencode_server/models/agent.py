@@ -47,6 +47,22 @@ class Command(OpenCodeBaseModel):
     description: str = ""
 
 
+class SkillInfo(OpenCodeBaseModel):
+    """Skill information."""
+
+    name: str
+    """Skill name."""
+
+    description: str
+    """Skill description."""
+
+    location: str
+    """File path where the skill is defined."""
+
+    content: str
+    """Skill content (e.g. SKILL.md body)."""
+
+
 class ProviderAuthMethod(OpenCodeBaseModel):
     """Authentication method for a provider."""
 
@@ -55,3 +71,32 @@ class ProviderAuthMethod(OpenCodeBaseModel):
 
     label: str
     """Human-readable label for the auth method."""
+
+
+class ProviderAuthAuthorization(OpenCodeBaseModel):
+    """Response from starting a provider OAuth flow."""
+
+    url: str
+    """URL to open in browser for authorization."""
+
+    method: Literal["auto", "code"]
+    """Authorization method."""
+
+    instructions: str
+    """Instructions to display to the user."""
+
+
+class AuthInfo(OpenCodeBaseModel):
+    """Authentication credential info."""
+
+    type: str = "api_key"
+    """Auth type (e.g., 'api_key', 'oauth')."""
+
+    token: str | None = None
+    """API key or access token."""
+
+    refresh: str | None = None
+    """Refresh token (for OAuth)."""
+
+    expires: int | None = None
+    """Token expiry timestamp."""

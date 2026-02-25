@@ -53,6 +53,7 @@ from agentpool_server.opencode_server.models import (
 from agentpool_server.opencode_server.models.base import OpenCodeBaseModel
 from agentpool_server.opencode_server.models.events import (
     CommandExecutedEvent,
+    PermissionAskedProperties,
     PermissionResolvedEvent,
     SessionDiffEvent,
 )
@@ -607,7 +608,9 @@ class PermissionResponse(OpenCodeBaseModel):
 
 
 @router.get("/{session_id}/permissions")
-async def get_pending_permissions(session_id: str, state: StateDep) -> list[dict[str, Any]]:
+async def get_pending_permissions(
+    session_id: str, state: StateDep
+) -> list[PermissionAskedProperties]:
     """Get all pending permission requests for a session.
 
     Returns a list of pending permissions awaiting user response.

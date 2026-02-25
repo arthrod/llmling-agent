@@ -117,8 +117,11 @@ from agentpool_server.opencode_server.models.file import (
 )
 from agentpool_server.opencode_server.models.agent import (
     Agent,
+    AuthInfo,
     Command,
+    ProviderAuthAuthorization,
     ProviderAuthMethod,
+    SkillInfo,
 )
 from agentpool_server.opencode_server.models.pty import (
     PtyCreateRequest,
@@ -159,7 +162,12 @@ from agentpool_server.opencode_server.models.events import (
     SessionUpdatedEvent,
     TuiSessionSelectEvent,
 )
-from agentpool_server.opencode_server.models.mcp import LogRequest, MCPStatus, McpResource
+from agentpool_server.opencode_server.models.mcp import (
+    LogRequest,
+    McpAuthorizationResponse,
+    MCPStatus,
+    McpResource,
+)
 from agentpool_server.opencode_server.models.config import Config
 from agentpool_server.opencode_server.models.question import (
     QuestionInfo,
@@ -179,6 +187,7 @@ __all__ = [
     "App",
     "AppTimeInfo",
     "AssistantMessage",
+    "AuthInfo",
     "Command",
     "CommandExecutedEvent",
     "CommandRequest",
@@ -198,6 +207,7 @@ __all__ = [
     "HealthResponse",
     "LogRequest",
     "MCPStatus",
+    "McpAuthorizationResponse",
     "McpResource",
     "McpToolsChangedEvent",
     "MessageAbortedError",
@@ -238,6 +248,7 @@ __all__ = [
     "ProjectUpdateRequest",
     "ProjectUpdatedEvent",
     "Provider",
+    "ProviderAuthAuthorization",
     "ProviderAuthError",
     "ProviderAuthErrorData",
     "ProviderAuthMethod",
@@ -282,6 +293,7 @@ __all__ = [
     "SessionUpdateRequest",
     "SessionUpdatedEvent",
     "ShellRequest",
+    "SkillInfo",
     "SnapshotPart",
     "StepFinishPart",
     "StepStartPart",

@@ -22,6 +22,7 @@ from agentpool_server.opencode_server.models import (
     MessageTime,
     MessageUpdatedEvent,
     MessageWithParts,
+    Part,
     PartRemovedEvent,
     PartUpdatedEvent,
     SessionIdleEvent,
@@ -45,7 +46,6 @@ from agentpool_server.opencode_server.stream_adapter import OpenCodeStreamAdapte
 
 
 if TYPE_CHECKING:
-    from agentpool_server.opencode_server.models.parts import Part
     from agentpool_server.opencode_server.state import ServerState
 
 
@@ -349,7 +349,7 @@ async def update_part(
     part_id: str,
     body: dict[str, Any],
     state: StateDep,
-) -> dict[str, Any]:
+) -> Part:
     """Update a part in a message.
 
     Accepts the full part object and replaces the existing part.
@@ -364,6 +364,6 @@ async def update_part(
                 updated = part.model_copy(update=body)
                 msg.parts[i] = updated
                 await state.broadcast_event(PartUpdatedEvent.create(updated))
-                return updated.model_dump(by_alias=True, exclude_none=True)
+                return updated
         raise HTTPException(status_code=404, detail="Part not found")
     raise HTTPException(status_code=404, detail="Message not found")

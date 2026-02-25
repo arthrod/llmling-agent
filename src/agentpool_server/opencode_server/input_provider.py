@@ -10,7 +10,11 @@ from mcp import types
 
 from agentpool.log import get_logger
 from agentpool.ui.base import InputProvider
-from agentpool_server.opencode_server.models.events import PermissionRequestEvent
+from agentpool_server.opencode_server.models.events import (
+    PermissionAskedProperties,
+    PermissionRequestEvent,
+    PermissionToolInfo,
+)
 
 
 if TYPE_CHECKING:
@@ -194,21 +198,28 @@ class OpenCodeInputProvider(InputProvider):
         )
         return True
 
-    def get_pending_permissions(self) -> list[dict[str, Any]]:
+    def get_pending_permissions(self) -> list[PermissionAskedProperties]:
         """Get all pending permission requests.
 
         Returns:
-            List of pending permission info dicts
+            List of pending permission properties
         """
-        return [
-            {
-                "permission_id": p.permission_id,
-                "tool_name": p.tool_name,
-                "args": p.args,
-                "created_at": p.created_at,
-            }
-            for p in self._pending_permissions.values()
-        ]
+        result: list[PermissionAskedProperties] = []
+        for p in self._pending_permissions.values():
+            args_preview = ", ".join(f"{k}={v!r}" for k, v in list(p.args.items())[:3])
+            pattern = f"{p.tool_name}: {args_preview}" if args_preview else p.tool_name
+            result.append(
+                PermissionAskedProperties(
+                    id=p.permission_id,
+                    session_id=self.session_id,
+                    permission=p.tool_name,
+                    patterns=[pattern],
+                    metadata=p.args,
+                    always=[pattern],
+                    tool=PermissionToolInfo(message_id="", call_id=None),
+                )
+            )
+        return result
 
     async def get_elicitation(
         self,

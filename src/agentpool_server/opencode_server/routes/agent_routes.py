@@ -24,11 +24,16 @@ from agentpool_config.mcp_server import (
 from agentpool_server.opencode_server.dependencies import StateDep
 from agentpool_server.opencode_server.models import (
     Agent,
+    AuthInfo,
     Command,
     LogRequest,
+    McpAuthorizationResponse,
     McpResource,
     MCPStatus,
+    ProviderAuthAuthorization,
     ProviderAuthMethod,
+    Session,
+    SkillInfo,
 )
 from agentpool_server.opencode_server.models.diagnostics import FormatterStatus
 from agentpool_server.opencode_server.models.events import LspStatus
@@ -72,7 +77,7 @@ async def list_agents(state: StateDep) -> list[Agent]:
 
 
 @router.get("/skill")
-async def list_skills(state: StateDep) -> list[dict[str, Any]]:
+async def list_skills(state: StateDep) -> list[SkillInfo]:
     """List all available skills.
 
     Skills are specialized capabilities available to agents.
@@ -246,7 +251,7 @@ async def disconnect_mcp_server(name: str, state: StateDep) -> bool:
 
 
 @router.post("/mcp/{name}/auth")
-async def start_mcp_auth(name: str, state: StateDep) -> dict[str, Any]:
+async def start_mcp_auth(name: str, state: StateDep) -> McpAuthorizationResponse:
     """Start OAuth authentication flow for an MCP server.
 
     Returns the authorization URL to open in a browser.
@@ -329,7 +334,7 @@ async def list_sessions_global(
     search: str | None = None,
     limit: int | None = None,
     archived: bool | None = None,
-) -> list[dict[str, Any]]:
+) -> list[Session]:
     """List sessions globally across all projects.
 
     Supports pagination via cursor (timestamp-based).
@@ -337,7 +342,7 @@ async def list_sessions_global(
     from agentpool_server.opencode_server.converters import session_data_to_opencode
 
     effective_limit = limit or 100
-    sessions = []
+    sessions: list[Session] = []
     for data in await state.agent.list_sessions(cwd=directory or state.agent.env.cwd):
         session = session_data_to_opencode(data)
         sessions.append(session)
@@ -351,11 +356,7 @@ async def list_sessions_global(
     if search:
         lower_search = search.lower()
         sessions = [s for s in sessions if lower_search in s.title.lower()]
-    # Convert to global format (includes directory info)
-    result: list[dict[str, Any]] = [
-        s.model_dump(by_alias=True, exclude_none=True) for s in sessions[:effective_limit]
-    ]
-    return result
+    return sessions[:effective_limit]
 
 
 @router.get("/experimental/tool/ids")
@@ -460,7 +461,7 @@ _oauth_flows: dict[str, dict[str, Any]] = {}
 
 
 @router.post("/provider/{provider_id}/oauth/authorize")
-async def oauth_authorize(provider_id: str, state: StateDep) -> dict[str, Any]:
+async def oauth_authorize(provider_id: str, state: StateDep) -> ProviderAuthAuthorization:
     """Start OAuth authorization flow for a provider.
 
     Returns URL and instructions for the user to complete authorization.
@@ -472,12 +473,11 @@ async def oauth_authorize(provider_id: str, state: StateDep) -> dict[str, Any]:
         auth_url = build_authorization_url(verifier, challenge)
         # Store verifier for callback
         _oauth_flows[f"anthropic:{verifier}"] = {"verifier": verifier}
-        return {
-            "url": auth_url,
-            "instructions": "Sign in with your Anthropic account and copy the authorization code",
-            "method": "code",
-            "state": verifier,
-        }
+        return ProviderAuthAuthorization(
+            url=auth_url,
+            instructions="Sign in with your Anthropic account and copy the authorization code",
+            method="code",
+        )
 
     if provider_id == "copilot":
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -501,13 +501,11 @@ async def oauth_authorize(provider_id: str, state: StateDep) -> dict[str, Any]:
         # Store device_code for callback
         _oauth_flows[f"copilot:{device_code}"] = {"device_code": device_code}
 
-        return {
-            "url": verification_uri,
-            "instructions": f"Enter code: {user_code}",
-            "method": "device_code",
-            "user_code": user_code,
-            "device_code": device_code,
-        }
+        return ProviderAuthAuthorization(
+            url=verification_uri,
+            instructions=f"Enter code: {user_code}",
+            method="auto",
+        )
 
     raise HTTPException(status_code=404, detail=f"Unknown provider: {provider_id}")
 
@@ -519,7 +517,7 @@ async def oauth_callback(
     code: str | None = None,
     device_code: str | None = None,
     verifier: str | None = None,
-) -> dict[str, Any]:
+) -> bool:
     """Handle OAuth callback/code exchange.
 
     For Anthropic: exchanges authorization code for tokens.
@@ -542,12 +540,7 @@ async def oauth_callback(
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
         else:
-            return {
-                "type": "success",
-                "access": token.access_token,
-                "refresh": token.refresh_token,
-                "expires": token.expires_at,
-            }
+            return True
 
     if provider_id == "copilot":
         if not device_code:
@@ -571,39 +564,17 @@ async def oauth_callback(
             data = resp.json()
 
         if "error" in data:
-            if data["error"] == "authorization_pending":
-                return {"type": "pending", "message": "Waiting for user authorization"}
             detail = data.get("error_description", data["error"])
             raise HTTPException(status_code=400, detail=detail)
 
-        if access_token := data.get("access_token"):
+        if data.get("access_token"):
             # Clean up flow state
             _oauth_flows.pop(f"copilot:{device_code}", None)
-            return {
-                "type": "success",
-                "access": access_token,
-                "refresh": data.get("refresh_token"),
-                "expires": None,  # Copilot tokens don't expire the same way
-            }
+            # TODO: Store copilot token
+            return True
 
-        return {"type": "pending", "message": "No token received yet"}
+        raise HTTPException(status_code=400, detail="No token received")
     raise HTTPException(status_code=404, detail=f"Unknown provider: {provider_id}")
-
-
-class AuthInfo(BaseModel):
-    """Authentication credential info."""
-
-    type: str = "api_key"
-    """Auth type (e.g., 'api_key', 'oauth')."""
-
-    token: str | None = None
-    """API key or access token."""
-
-    refresh: str | None = None
-    """Refresh token (for OAuth)."""
-
-    expires: int | None = None
-    """Token expiry timestamp."""
 
 
 @router.put("/auth/{provider_id}")

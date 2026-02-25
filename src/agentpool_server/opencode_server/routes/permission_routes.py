@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from agentpool import log
 from agentpool_server.opencode_server.dependencies import StateDep
-from agentpool_server.opencode_server.models.events import PermissionResolvedEvent
+from agentpool_server.opencode_server.models.events import (
+    PermissionAskedProperties,
+    PermissionResolvedEvent,
+)
 
 
 router = APIRouter(prefix="/permission", tags=["permission"])
@@ -25,9 +28,9 @@ class PermissionResponse(BaseModel):
 
 
 @router.get("")
-async def list_permissions(state: StateDep) -> list[dict[str, Any]]:
+async def list_permissions(state: StateDep) -> list[PermissionAskedProperties]:
     """List all pending permission requests across all sessions."""
-    result: list[dict[str, Any]] = []
+    result: list[PermissionAskedProperties] = []
     for input_provider in state.input_providers.values():
         result.extend(input_provider.get_pending_permissions())
     return result
