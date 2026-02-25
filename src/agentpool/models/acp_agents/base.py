@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated, Any, Literal, assert_never
 
 from exxec_config import (
@@ -18,8 +19,6 @@ from agentpool_config.toolsets import BaseToolsetConfig
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from exxec import ExecutionEnvironment
 
     from agentpool.agents.acp_agent import ACPAgent
@@ -55,7 +54,7 @@ class BaseACPAgentConfig(BaseAgentConfig):
     env_vars: EnvVarsField = Field(default_factory=dict)
     """Environment variables to set."""
 
-    tools: list[AnyToolConfig | str] = Field(
+    tools: Sequence[AnyToolConfig | str] = Field(
         default_factory=list,
         title="Tools",
         examples=[
