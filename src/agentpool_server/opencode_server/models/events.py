@@ -295,6 +295,20 @@ class PartRemovedEvent(OpenCodeBaseModel):
         return cls(properties=props)
 
 
+PermissionReply = Literal["once", "always", "reject"]
+"""Permission reply type matching OpenCode's PermissionNext.Reply."""
+
+
+class PermissionReplyRequest(OpenCodeBaseModel):
+    """Request body for responding to a permission request."""
+
+    reply: PermissionReply
+    """Reply: 'once' | 'always' | 'reject'."""
+
+    message: str | None = None
+    """Optional message to include with the reply."""
+
+
 class PermissionToolInfo(OpenCodeBaseModel):
     """Tool information for permission event."""
 
@@ -380,7 +394,7 @@ class PermissionRepliedProperties(OpenCodeBaseModel):
     request_id: str
     """Request/Permission ID."""
 
-    reply: Literal["once", "always", "reject"]
+    reply: PermissionReply
     """Reply: 'once' | 'always' | 'reject'."""
 
 
@@ -398,7 +412,7 @@ class PermissionResolvedEvent(OpenCodeBaseModel):
         cls,
         session_id: str,
         request_id: str,
-        reply: Literal["once", "always", "reject"],
+        reply: PermissionReply,
     ) -> Self:
         props = PermissionRepliedProperties(
             session_id=session_id,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 from anyenv.text_sharing.opencode import Message, MessagePart, OpenCodeSharer
 from fastapi import APIRouter, HTTPException
@@ -54,6 +54,7 @@ from agentpool_server.opencode_server.models.base import OpenCodeBaseModel
 from agentpool_server.opencode_server.models.events import (
     CommandExecutedEvent,
     PermissionAskedProperties,
+    PermissionReplyRequest,
     PermissionResolvedEvent,
     SessionDiffEvent,
 )
@@ -597,16 +598,6 @@ async def run_shell_command(
     return assistant_msg_with_parts
 
 
-class PermissionResponse(OpenCodeBaseModel):
-    """Request body for responding to a permission request (deprecated)."""
-
-    reply: Literal["once", "always", "reject"]
-    message: str | None = None
-    """Optional message to include with the reply."""
-    response: dict[str, Any] | None = None
-    """Legacy field: OpenCode also accepts {response: {reply: ...}}."""
-
-
 @router.get("/{session_id}/permissions")
 async def get_pending_permissions(
     session_id: str, state: StateDep
@@ -631,7 +622,7 @@ async def get_pending_permissions(
 async def respond_to_permission(
     session_id: str,
     permission_id: str,
-    body: PermissionResponse,
+    body: PermissionReplyRequest,
     state: StateDep,
 ) -> bool:
     """Respond to a pending permission request.

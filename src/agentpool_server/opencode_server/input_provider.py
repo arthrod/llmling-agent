@@ -20,12 +20,10 @@ from agentpool_server.opencode_server.models.events import (
 if TYPE_CHECKING:
     from agentpool.agents.context import AgentContext, ConfirmationResult
     from agentpool.messaging import ChatMessage
+    from agentpool_server.opencode_server.models.events import PermissionReply
     from agentpool_server.opencode_server.state import ServerState
 
 logger = get_logger(__name__)
-
-# OpenCode permission responses
-PermissionResponse = str  # "once" | "always" | "reject"
 
 
 @dataclass
@@ -35,7 +33,7 @@ class PendingPermission:
     permission_id: str
     tool_name: str
     args: dict[str, Any]
-    future: asyncio.Future[PermissionResponse]
+    future: asyncio.Future[PermissionReply]
     created_at: float = field(default_factory=lambda: __import__("time").time())
 
 
@@ -104,7 +102,7 @@ class OpenCodeInputProvider(InputProvider):
 
             # Create a pending permission request
             permission_id = self._generate_permission_id()
-            future: asyncio.Future[PermissionResponse] = asyncio.get_event_loop().create_future()
+            future: asyncio.Future[PermissionReply] = asyncio.get_event_loop().create_future()
             pending = PendingPermission(
                 permission_id=permission_id,
                 tool_name=tool_name,
@@ -153,7 +151,7 @@ class OpenCodeInputProvider(InputProvider):
             return "abort_run"
 
     def _handle_permission_response(
-        self, response: PermissionResponse, tool_name: str
+        self, response: PermissionReply, tool_name: str
     ) -> ConfirmationResult:
         """Handle permission response and update tool approval state."""
         match response:
@@ -169,7 +167,7 @@ class OpenCodeInputProvider(InputProvider):
                 logger.warning("Unknown permission response", response=response)
                 return "abort_run"
 
-    def resolve_permission(self, permission_id: str, response: PermissionResponse) -> bool:
+    def resolve_permission(self, permission_id: str, response: PermissionReply) -> bool:
         """Resolve a pending permission request.
 
         Called by the REST endpoint when the client responds.

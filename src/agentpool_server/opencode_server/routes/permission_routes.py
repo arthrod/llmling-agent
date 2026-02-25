@@ -2,29 +2,19 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 
 from agentpool import log
 from agentpool_server.opencode_server.dependencies import StateDep
 from agentpool_server.opencode_server.models.events import (
     PermissionAskedProperties,
+    PermissionReplyRequest,
     PermissionResolvedEvent,
 )
 
 
 router = APIRouter(prefix="/permission", tags=["permission"])
 logger = log.get_logger(__name__)
-
-
-class PermissionResponse(BaseModel):
-    """Request body for responding to a permission request."""
-
-    reply: Literal["once", "always", "reject"]
-    message: str | None = None
-    """Optional message to include with the reply."""
 
 
 @router.get("")
@@ -39,7 +29,7 @@ async def list_permissions(state: StateDep) -> list[PermissionAskedProperties]:
 @router.post("/{permission_id}/reply")
 async def reply_to_permission(
     permission_id: str,
-    body: PermissionResponse,
+    body: PermissionReplyRequest,
     state: StateDep,
 ) -> bool:
     """Respond to a pending permission request (OpenCode TUI compatibility).
