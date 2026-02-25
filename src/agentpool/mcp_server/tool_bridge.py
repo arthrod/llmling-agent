@@ -264,6 +264,15 @@ class ToolManagerBridge:
     ACP agents (ACPAgent, ClaudeCodeAgent, CodexAgent) that use the bridge.
     """
 
+    tool_metadata: dict[str, dict[str, Any]] = field(default_factory=dict, repr=False)
+    """Metadata from tool results, keyed by tool_call_id.
+
+    Populated by WrappedTool.run() when a tool returns metadata.
+    Agents read this to enrich ToolCallCompleteEvent with metadata that
+    the SDK would otherwise strip (e.g. MCP _meta fields).
+    Cleared at the start of each run via set_run_context().
+    """
+
     async def __aenter__(self) -> Self:
         """Start the MCP server."""
         await self.start()
@@ -428,7 +437,6 @@ class ToolManagerBridge:
                 """Execute the wrapped tool with context bridging."""
                 from fastmcp.server.dependencies import get_context
 
-                from agentpool.agents.events import ToolResultMetadataEvent
                 from agentpool.tools.base import ToolResult as AgentPoolToolResult
 
                 args = arguments.copy()
@@ -462,12 +470,11 @@ class ToolManagerBridge:
                 # Invoke with context - copy args since invoke_tool_with_context
                 # modifies kwargs in-place to inject context parameters
                 result = await self._bridge.invoke_tool_with_context(self._tool, ctx, args)
-                # Emit metadata event for ClaudeCodeAgent to correlate
+                # Store metadata for agent to correlate with ToolCallCompleteEvent
                 # (works around Claude SDK stripping MCP _meta field)
                 if isinstance(result, AgentPoolToolResult) and result.metadata:
-                    logger.info("Emitting ToolResultMetadataEvent", tool_call_id=tc_id)
-                    event = ToolResultMetadataEvent(tool_call_id=tc_id, metadata=result.metadata)
-                    await ctx.events.emit_event(event)
+                    logger.info("Storing tool result metadata", tool_call_id=tc_id)
+                    self._bridge.tool_metadata[tc_id] = result.metadata
 
                 # Consume pending injection and append to result
                 if self._bridge.injection_manager and (
@@ -501,6 +508,7 @@ class ToolManagerBridge:
         self._current_deps = deps
         self._current_input_provider = input_provider
         self._current_prompt = prompt
+        self.tool_metadata.clear()
         try:
             yield self
         finally:

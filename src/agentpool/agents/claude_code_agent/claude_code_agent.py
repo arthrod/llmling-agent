@@ -100,7 +100,6 @@ from agentpool.agents.events import (
     StreamCompleteEvent,
     ToolCallCompleteEvent,
     ToolCallStartEvent,
-    ToolResultMetadataEvent,
 )
 from agentpool.agents.events.infer_info import derive_rich_tool_info
 from agentpool.agents.exceptions import (
@@ -114,7 +113,6 @@ from agentpool.log import get_logger
 from agentpool.messaging import ChatMessage
 from agentpool.messaging.messages import TokenCost
 from agentpool.sessions.models import SessionData
-from agentpool.utils.streams import merge_queue_into_iterator
 from agentpool.utils.time_utils import get_now
 
 
@@ -777,7 +775,6 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         from clawd_code_sdk import (
             AssistantMessage,
             InitSystemMessage,
-            Message,
             ResultMessage,
             TextBlock,
             ThinkingBlock,
@@ -818,8 +815,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         emitted_tool_starts: set[str] = set()
         tool_accumulator = ToolCallAccumulator()
         resolved_model: str | None = None
-        # Accumulate metadata events by tool_call_id (workaround for SDK stripping _meta)
-        tool_metadata: dict[str, dict[str, Any]] = {}
+
         # Handle ephemeral execution (fork session if store_history=False)
         fork_client = None
         client = self._client
@@ -847,23 +843,8 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             # Persist SDK session ID to storage for cross-referencing
             if self.storage and self.session_id:
                 await self.storage.update_sdk_session_id(self.session_id, self._sdk_session_id)
-            # Merge SDK messages with event queue for real-time tool event streaming
-            async with (
-                self._tool_bridge.set_run_context(deps, input_provider, prompt=prompts),
-                merge_queue_into_iterator(stream, self._event_queue) as events,  # ty: ignore[invalid-argument-type]
-            ):
-                async for event_or_message in events:
-                    # Capture metadata events for correlation with tool results
-                    if isinstance(event_or_message, ToolResultMetadataEvent):
-                        tool_metadata[event_or_message.tool_call_id] = event_or_message.metadata
-                        # Don't yield metadata events - they're internal correlation only
-                        continue
-                    if not isinstance(event_or_message, Message):
-                        # Check if it's a queued event (from tools via EventEmitter)
-                        # It's an event from the queue - yield it immediately
-                        yield event_or_message
-                        continue
-                    message = event_or_message
+            async with self._tool_bridge.set_run_context(deps, input_provider, prompt=prompts):
+                async for message in stream:
                     match message:
                         case AssistantMessage(model=model, content=msg_content):
                             # Track resolved model from provider response
@@ -941,7 +922,9 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
                                     tool_input = (
                                         cast(dict[str, Any], tool_use.input) if tool_use else {}
                                     )
-                                    metadata: dict[str, Any] | None = tool_metadata.get(tc_id)
+                                    metadata: dict[str, Any] | None = (
+                                        self._tool_bridge.tool_metadata.get(tc_id)
+                                    )
                                     if not metadata and isinstance(message.tool_use_result, list):
                                         result = (
                                             message.tool_use_result[0]

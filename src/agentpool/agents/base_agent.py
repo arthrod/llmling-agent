@@ -25,6 +25,7 @@ from agentpool.messaging import ChatMessage, MessageHistory, MessageNode
 from agentpool.prompts.convert import convert_prompts
 from agentpool.tools.manager import ToolManager
 from agentpool.utils.inspection import call_with_context
+from agentpool.utils.streams import merge_queue_into_iterator
 from agentpool.utils.time_utils import get_now
 
 
@@ -724,7 +725,7 @@ class BaseAgent[TDeps = None, TResult = str](MessageNode[TDeps, TResult]):
                     raise RuntimeError(f"Run blocked: {reason}")  # noqa: TRY301
 
             context = self.get_context(input_provider=input_provider)
-            async for event in self._stream_events(
+            iterator = self._stream_events(
                 [*pending_parts, *converted_prompts],
                 user_msg=user_msg,
                 effective_parent_id=effective_parent_id,
@@ -736,12 +737,14 @@ class BaseAgent[TDeps = None, TResult = str](MessageNode[TDeps, TResult]):
                 input_provider=input_provider,
                 wait_for_connections=wait_for_connections,
                 deps=deps,
-            ):
-                await resolved_handler(context, event)
-                yield event
-                # Capture final message from StreamCompleteEvent
-                if isinstance(event, StreamCompleteEvent):
-                    final_message = event.message
+            )
+            async with merge_queue_into_iterator(iterator, self._event_queue) as merged:  # ty: ignore[invalid-argument-type]
+                async for event in merged:
+                    await resolved_handler(context, event)
+                    yield event
+                    # Capture final message from StreamCompleteEvent
+                    if isinstance(event, StreamCompleteEvent):
+                        final_message = event.message
         except Exception as e:
             self.log.exception("Agent stream failed")
             failed_event = BaseAgent.RunFailedEvent(

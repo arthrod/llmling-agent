@@ -27,7 +27,6 @@ from agentpool.tools.base import FunctionTool
 from agentpool.tools.exceptions import ToolError
 from agentpool.utils.inspection import get_argument_key
 from agentpool.utils.result_utils import to_type
-from agentpool.utils.streams import merge_queue_into_iterator
 
 
 if TYPE_CHECKING:
@@ -694,17 +693,14 @@ class Agent[TDeps = None, OutputDataT = str](BaseAgent[TDeps, OutputDataT]):
                             break
                         # Stream events from model request or tool call nodes
                         case ModelRequestNode() | CallToolsNode():
-                            async with (
-                                node.stream(agent_run.ctx) as stream,
-                                merge_queue_into_iterator(stream, self._event_queue) as merged,  # type: ignore[arg-type]
-                            ):
-                                async for event in merged:
+                            async with node.stream(agent_run.ctx) as stream:
+                                async for event in stream:
                                     if self._cancelled:
                                         break
                                     yield event
                                     if combined := process_tool_event(
                                         self.name,
-                                        event,  # ty: ignore[invalid-argument-type]
+                                        event,
                                         pending_tcs,
                                         message_id,
                                     ):

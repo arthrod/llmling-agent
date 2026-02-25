@@ -49,7 +49,6 @@ from agentpool.agents.events import (
     RunStartedEvent,
     StreamCompleteEvent,
     ToolCallCompleteEvent,
-    ToolResultMetadataEvent,
 )
 from agentpool.agents.events.processors import event_to_part
 from agentpool.agents.exceptions import (
@@ -59,7 +58,6 @@ from agentpool.agents.exceptions import (
 )
 from agentpool.log import get_logger
 from agentpool.messaging import ChatMessage
-from agentpool.utils.streams import merge_queue_into_iterator
 from agentpool.utils.subprocess_utils import SubprocessError, run_with_process_monitor
 from agentpool.utils.token_breakdown import calculate_usage_from_parts
 
@@ -491,16 +489,9 @@ class ACPAgent[TDeps = None](BaseAgent[TDeps, str]):
                 if native_event := acp_to_native_event(update):
                     yield native_event
 
-        tool_metadata: dict[str, dict[str, Any]] = {}
         try:
-            async with (
-                self._tool_bridge.set_run_context(deps, input_provider, prompt=prompts),
-                merge_queue_into_iterator(poll_acp_events(), self._event_queue) as merged_events,  # ty: ignore[invalid-argument-type]
-            ):
-                async for event in merged_events:
-                    if isinstance(event, ToolResultMetadataEvent):
-                        tool_metadata[event.tool_call_id] = event.metadata
-                        continue
+            async with self._tool_bridge.set_run_context(deps, input_provider, prompt=prompts):
+                async for event in poll_acp_events():
                     if self._cancelled:
                         self.log.info("Stream cancelled by user")
                         break
@@ -510,13 +501,16 @@ class ACPAgent[TDeps = None](BaseAgent[TDeps, str]):
                             enriched_event = replace(enriched_event, agent_name=self.name)
                         if (
                             enriched_event.metadata is None
-                            and enriched_event.tool_call_id in tool_metadata
+                            and enriched_event.tool_call_id in self._tool_bridge.tool_metadata
                         ):
                             enriched_event = replace(
-                                enriched_event, metadata=tool_metadata[enriched_event.tool_call_id]
+                                enriched_event,
+                                metadata=self._tool_bridge.tool_metadata[
+                                    enriched_event.tool_call_id
+                                ],
                             )
                         event = enriched_event  # noqa: PLW2901
-                    part = event_to_part(event)  # ty: ignore[invalid-argument-type]
+                    part = event_to_part(event)
                     if isinstance(part, TextPart):
                         text_chunks.append(part.content)
                     if part:

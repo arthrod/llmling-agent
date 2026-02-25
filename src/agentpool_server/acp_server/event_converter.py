@@ -61,7 +61,6 @@ from agentpool.agents.events import (
     ToolCallCompleteEvent,
     ToolCallProgressEvent,
     ToolCallStartEvent,
-    ToolResultMetadataEvent,
 )
 from agentpool.log import get_logger
 from agentpool.utils.pydantic_ai_helpers import safe_args_as_dict
@@ -526,7 +525,6 @@ class ACPEventConverter:
                 | ToolCallCompleteEvent()
                 | ToolCallProgressEvent()
                 | ToolCallStartEvent()
-                | ToolResultMetadataEvent()
                 | CustomEvent()
             ):
                 pass  # TODO
@@ -612,7 +610,6 @@ class ACPEventConverter:
                 | ToolCallCompleteEvent()
                 | ToolCallProgressEvent()
                 | ToolCallStartEvent()
-                | ToolResultMetadataEvent()
                 | CustomEvent()
             ):
                 pass  # TODO

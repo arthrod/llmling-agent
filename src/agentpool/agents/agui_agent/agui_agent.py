@@ -417,9 +417,6 @@ class AGUIAgent[TDeps = None](BaseAgent[TDeps, str]):
         if response_parts:
             model_messages.append(ModelResponse(parts=response_parts))
 
-        # Final drain of event queue after stream completes
-        async for e in self._drain_event_queue():
-            yield e
         # Calculate approximate token usage from what we can observe
         usage, cost_info = await calculate_usage_from_parts(
             input_parts=prompts,
@@ -440,14 +437,6 @@ class AGUIAgent[TDeps = None](BaseAgent[TDeps, str]):
             cost_info=cost_info,
         )
         yield StreamCompleteEvent(message=final_message)  # Post-processing handled by base class
-
-    async def _drain_event_queue(self) -> AsyncIterator[RichAgentStreamEvent[Any]]:
-        """Drain the event queue and yield events."""
-        while not self._event_queue.empty():
-            try:
-                yield self._event_queue.get_nowait()
-            except asyncio.QueueEmpty:
-                break
 
     async def _process_events(
         self,
@@ -503,8 +492,6 @@ class AGUIAgent[TDeps = None](BaseAgent[TDeps, str]):
 
                 # Convert to native event and distribute to handlers
                 if native_event := agui_to_native_event(event):
-                    async for e in self._drain_event_queue():
-                        yield e
                     yield native_event
 
         # Flush any pending chunk events at end of stream
