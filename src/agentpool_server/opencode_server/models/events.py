@@ -22,6 +22,9 @@ from agentpool_server.opencode_server.models.session import (  # noqa: TC001
 )
 
 
+Variant = Literal["info", "success", "warning", "error"]
+
+
 class EmptyProperties(OpenCodeBaseModel):
     """Empty properties object."""
 
@@ -511,7 +514,7 @@ class TuiToastShowProperties(OpenCodeBaseModel):
 
     title: str | None = None
     message: str
-    variant: Literal["info", "success", "warning", "error"] = "info"
+    variant: Variant = "info"
     duration: int = 5000  # Duration in milliseconds
 
 
@@ -525,7 +528,7 @@ class TuiToastShowEvent(OpenCodeBaseModel):
     def create(
         cls,
         message: str,
-        variant: Literal["info", "success", "warning", "error"] = "info",
+        variant: Variant = "info",
         title: str | None = None,
         duration: int = 5000,
     ) -> Self:
