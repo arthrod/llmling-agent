@@ -331,29 +331,57 @@ async def list_mcp_resources(state: StateDep) -> dict[str, McpResource]:
 @router.post("/experimental/worktree")
 async def create_worktree(request: WorktreeCreateRequest, state: StateDep) -> WorktreeInfo:
     """Create a new git worktree for isolated agent work."""
-    _ = state, request
-    raise HTTPException(status_code=501, detail="Worktrees not yet supported")
+    from agentpool.utils.worktree import (
+        create_worktree as _create_worktree,
+    )
+
+    repo_dir = state.agent.env.cwd or state.working_dir
+    try:
+        name, branch, directory = await _create_worktree(repo_dir, request.name)
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return WorktreeInfo(name=name, branch=branch, directory=directory)
 
 
 @router.get("/experimental/worktree")
 async def list_worktrees(state: StateDep) -> list[str]:
     """List all sandbox worktree directories."""
-    _ = state
-    return []
+    from agentpool.utils.worktree import (
+        list_worktrees as _list_worktrees,
+    )
+
+    repo_dir = state.agent.env.cwd or state.working_dir
+    return await _list_worktrees(repo_dir)
 
 
 @router.delete("/experimental/worktree")
 async def remove_worktree(request: WorktreeRemoveRequest, state: StateDep) -> bool:
     """Remove a git worktree and delete its branch."""
-    _ = state, request
-    raise HTTPException(status_code=501, detail="Worktrees not yet supported")
+    from agentpool.utils.worktree import (
+        remove_worktree as _remove_worktree,
+    )
+
+    repo_dir = state.agent.env.cwd or state.working_dir
+    try:
+        await _remove_worktree(repo_dir, request.directory)
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return True
 
 
 @router.post("/experimental/worktree/reset")
 async def reset_worktree(request: WorktreeResetRequest, state: StateDep) -> bool:
     """Reset a worktree branch to the primary default branch."""
-    _ = state, request
-    raise HTTPException(status_code=501, detail="Worktrees not yet supported")
+    from agentpool.utils.worktree import (
+        reset_worktree as _reset_worktree,
+    )
+
+    repo_dir = state.agent.env.cwd or state.working_dir
+    try:
+        await _reset_worktree(repo_dir, request.directory)
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return True
 
 
 @router.get("/experimental/session")
