@@ -82,7 +82,6 @@ from pydantic_ai.usage import RequestUsage
 
 from agentpool.agents.base_agent import BaseAgent
 from agentpool.agents.claude_code_agent.converters import (
-    claude_message_to_events,
     confirmation_result_to_native,
     convert_mcp_servers_to_sdk_format,
     convert_to_opencode_metadata,
@@ -343,8 +342,6 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         # ToolBridge state for exposing toolsets via MCP
         self._tool_bridge = ToolManagerBridge(node=self, injection_manager=self._injection_manager)
         self._mcp_servers: dict[str, McpServerConfig] = {}  # Claude SDK MCP server configs
-        # Track pending tool call for permission matching
-        self._pending_tool_call_ids: dict[str, str] = {}
         # Claude storage provider is available via self.storage
         self._hook_manager = ClaudeCodeHookManager(
             agent_name=self.name,
@@ -604,15 +601,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         if self._input_provider:
             # Get tool_use_id from SDK context if available (requires SDK >= 0.1.19)
             # TODO: Remove fallback once claude-agent-sdk with tool_use_id is released
-            if tc_id := context.tool_use_id:  # pyright: ignore[reportAttributeAccessIssue]
-                tool_call_id: str | None = tc_id
-            else:
-                # Fallback: look up from streaming events or generate our own
-                tool_call_id = self._pending_tool_call_ids.get(tool_name)
-                if not tool_call_id:
-                    tool_call_id = f"perm_{uuid.uuid4().hex[:12]}"
-                    self._pending_tool_call_ids[tool_name] = tool_call_id
-
+            tool_call_id = context.tool_use_id
             display_name = _strip_mcp_prefix(tool_name)
             self.log.debug("Permission request", tool_name=display_name, tool_call_id=tool_call_id)
             ctx = self.get_context(
@@ -927,228 +916,226 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
                 merge_queue_into_iterator(stream, self._event_queue) as events,  # ty: ignore[invalid-argument-type]
             ):
                 async for event_or_message in events:
-                    # Check if it's a queued event (from tools via EventEmitter)
+                    # Capture metadata events for correlation with tool results
+                    if isinstance(event_or_message, ToolResultMetadataEvent):
+                        tool_metadata[event_or_message.tool_call_id] = event_or_message.metadata
+                        # Don't yield metadata events - they're internal correlation only
+                        continue
                     if not isinstance(event_or_message, Message):
-                        # Capture metadata events for correlation with tool results
-                        if isinstance(event_or_message, ToolResultMetadataEvent):
-                            tool_metadata[event_or_message.tool_call_id] = event_or_message.metadata
-                            # Don't yield metadata events - they're internal correlation only
-                            continue
+                        # Check if it's a queued event (from tools via EventEmitter)
                         # It's an event from the queue - yield it immediately
                         yield event_or_message
                         continue
-
                     message = event_or_message
-                    # Process assistant messages - extract parts incrementally
-                    if isinstance(message, AssistantMessage):
-                        # Track resolved model from provider response
-                        if message.model:
-                            resolved_model = message.model
-                        # Check for usage limit error
-                        for block in message.content:
-                            match block:
-                                case TextBlock(text=text):
-                                    current_response_parts.append(TextPart(content=text))
-                                case ThinkingBlock(thinking=thinking):
-                                    current_response_parts.append(ThinkingPart(content=thinking))
-                                case ToolUseBlock(id=tc_id, name=name, input=input_data):
-                                    pending_tool_calls[tc_id] = block
-                                    display_name = _strip_mcp_prefix(name)
-                                    tool_call_part = ToolCallPart(
-                                        tool_name=display_name,
-                                        args=cast(dict[str, Any], input_data),
-                                        tool_call_id=tc_id,
-                                    )
-                                    current_response_parts.append(tool_call_part)
-                                    # Emit FunctionToolCallEvent (triggers UI notification)
-                                    # func_tool_event = FunctionToolCallEvent(part=tool_call_part)
-                                    # await event_handlers(None, func_tool_event)
-                                    # yield func_tool_event
-
-                                    # Only emit ToolCallStartEvent if not already emitted
-                                    # via streaming (emits early with partial info)
-                                    if tc_id not in emitted_tool_starts:
-                                        rich_info = derive_rich_tool_info(name, input_data)
-                                        tool_start_event = ToolCallStartEvent(
-                                            tool_call_id=tc_id,
-                                            tool_name=display_name,
-                                            title=rich_info.title,
-                                            kind=rich_info.kind,
-                                            locations=rich_info.locations,
-                                            content=rich_info.content,
-                                            raw_input=cast(dict[str, Any], input_data),
+                    match message:
+                        case AssistantMessage(model=model, content=msg_content):
+                            # Track resolved model from provider response
+                            if model:
+                                resolved_model = model
+                            # Check for usage limit error
+                            for block in msg_content:
+                                match block:
+                                    case TextBlock(text=text):
+                                        current_response_parts.append(TextPart(content=text))
+                                    case ThinkingBlock(thinking=thinking):
+                                        current_response_parts.append(
+                                            ThinkingPart(content=thinking)
                                         )
-                                        yield tool_start_event
-                                    # Clean up from accumulator (always, both branches)
-                                    tool_accumulator.complete(tc_id)
-                                case ToolResultBlock(tool_use_id=tc_id, content=content):
-                                    # Tool result received - flush response parts and add request
+                                    case ToolUseBlock(id=tc_id, name=name, input=input_data):
+                                        pending_tool_calls[tc_id] = block
+                                        display_name = _strip_mcp_prefix(name)
+                                        tool_call_part = ToolCallPart(
+                                            tool_name=display_name,
+                                            args=cast(dict[str, Any], input_data),
+                                            tool_call_id=tc_id,
+                                        )
+                                        current_response_parts.append(tool_call_part)
+                                        # Emit FunctionToolCallEvent (triggers UI notification)
+                                        # fn_tool_event = FunctionToolCallEvent(part=tool_call_part)
+                                        # await event_handlers(None, fn_tool_event)
+                                        # yield fn_tool_event
+
+                                        # Only emit ToolCallStartEvent if not already emitted
+                                        # via streaming (emits early with partial info)
+                                        if tc_id not in emitted_tool_starts:
+                                            rich_info = derive_rich_tool_info(name, input_data)
+                                            tool_start_event = ToolCallStartEvent(
+                                                tool_call_id=tc_id,
+                                                tool_name=display_name,
+                                                title=rich_info.title,
+                                                kind=rich_info.kind,
+                                                locations=rich_info.locations,
+                                                content=rich_info.content,
+                                                raw_input=cast(dict[str, Any], input_data),
+                                            )
+                                            yield tool_start_event
+                                        # Clean up from accumulator (always, both branches)
+                                        tool_accumulator.complete(tc_id)
+                                    case ToolResultBlock(tool_use_id=tc_id, content=content):
+                                        # Tool result received - flush response parts & add request
+                                        if current_response_parts:
+                                            response = ModelResponse(parts=current_response_parts)
+                                            model_messages.append(response)
+                                            current_response_parts = []
+                                        # Get tool name from pending calls
+                                        tool_use = pending_tool_calls.pop(tc_id)
+                                        tool_name = _strip_mcp_prefix(tool_use.name)
+                                        tool_input = (
+                                            cast(dict[str, Any], tool_use.input) if tool_use else {}
+                                        )
+                                        # Create ToolReturnPart for the result
+                                        return_part = ToolReturnPart(
+                                            tool_name=tool_name,
+                                            content=content,
+                                            tool_call_id=tc_id,
+                                        )
+                                        yield FunctionToolResultEvent(result=return_part)
+                                        yield ToolCallCompleteEvent(
+                                            tool_name=tool_name,
+                                            tool_call_id=tc_id,
+                                            tool_input=tool_input,
+                                            tool_result=content,
+                                            agent_name=self.name,
+                                            message_id="",
+                                            metadata=tool_metadata.get(tc_id),
+                                        )
+                                        # Add tool return as ModelRequest
+                                        model_messages.append(ModelRequest(parts=[return_part]))
+
+                        # Process user messages - may contain tool results
+                        case UserMessage(content=user_content):
+                            user_blocks = (
+                                [user_content] if isinstance(user_content, str) else user_content
+                            )
+                            # Extract tool_use_result from UserMessage for metadata conversion
+                            for user_block in user_blocks:
+                                if isinstance(user_block, ToolResultBlock):
+                                    tc_id = user_block.tool_use_id
+                                    result_content = user_block.get_parsed_content()
+                                    # Flush response parts
                                     if current_response_parts:
-                                        response = ModelResponse(parts=current_response_parts)
-                                        model_messages.append(response)
+                                        model_response = ModelResponse(parts=current_response_parts)
+                                        model_messages.append(model_response)
                                         current_response_parts = []
+
                                     # Get tool name from pending calls
                                     tool_use = pending_tool_calls.pop(tc_id)
-                                    tool_name = _strip_mcp_prefix(tool_use.name)
-                                    tool_input = (
-                                        cast(dict[str, Any], tool_use.input) if tool_use else {}
-                                    )
                                     # Create ToolReturnPart for the result
                                     return_part = ToolReturnPart(
-                                        tool_name=tool_name,
-                                        content=content,
+                                        tool_name=_strip_mcp_prefix(tool_use.name),
+                                        content=result_content,
                                         tool_call_id=tc_id,
                                     )
                                     # Emit FunctionToolResultEvent (for session.py to complete UI)
                                     yield FunctionToolResultEvent(result=return_part)
+                                    # Build metadata: prefer existing tool_metadata,
+                                    # then convert SDK result
+                                    tool_input = (
+                                        cast(dict[str, Any], tool_use.input) if tool_use else {}
+                                    )
+                                    metadata: dict[str, Any] | None = tool_metadata.get(tc_id)
+                                    if not metadata and isinstance(message.tool_use_result, list):
+                                        result = (
+                                            message.tool_use_result[0]
+                                            if message.tool_use_result
+                                            else {}
+                                        )
+
+                                        # Convert Claude Code SDK's tool_use_result to OpenCode fmt
+                                        metadata = convert_to_opencode_metadata(
+                                            tool_use.name,
+                                            result,
+                                            tool_input,
+                                        )  # type: ignore[assignment]
+
                                     # Also emit ToolCallCompleteEvent for consumers that expect it
                                     yield ToolCallCompleteEvent(
-                                        tool_name=tool_name,
+                                        tool_name=_strip_mcp_prefix(tool_use.name),
                                         tool_call_id=tc_id,
                                         tool_input=tool_input,
-                                        tool_result=content,
+                                        tool_result=result_content,
                                         agent_name=self.name,
                                         message_id="",
-                                        metadata=tool_metadata.get(tc_id),
+                                        metadata=metadata,
                                     )
                                     # Add tool return as ModelRequest
                                     model_messages.append(ModelRequest(parts=[return_part]))
 
-                    # Process user messages - may contain tool results
-                    elif isinstance(message, UserMessage):
-                        user_content = message.content
-                        user_blocks = (
-                            [user_content] if isinstance(user_content, str) else user_content
-                        )
-                        # Extract tool_use_result from UserMessage for metadata conversion
-                        for user_block in user_blocks:
-                            if isinstance(user_block, ToolResultBlock):
-                                tc_id = user_block.tool_use_id
-                                result_content = user_block.get_parsed_content()
-                                # Flush response parts
-                                if current_response_parts:
-                                    model_response = ModelResponse(parts=current_response_parts)
-                                    model_messages.append(model_response)
-                                    current_response_parts = []
-
-                                # Get tool name from pending calls
-                                tool_use = pending_tool_calls.pop(tc_id)
-                                # Create ToolReturnPart for the result
-                                return_part = ToolReturnPart(
-                                    tool_name=_strip_mcp_prefix(tool_use.name),
-                                    content=result_content,
-                                    tool_call_id=tc_id,
-                                )
-                                # Emit FunctionToolResultEvent (for session.py to complete UI)
-                                yield FunctionToolResultEvent(result=return_part)
-                                # Build metadata: prefer existing tool_metadata,
-                                # then convert SDK result
-                                tool_input = (
-                                    cast(dict[str, Any], tool_use.input) if tool_use else {}
-                                )
-                                metadata: dict[str, Any] | None = tool_metadata.get(tc_id)
-                                if not metadata and isinstance(message.tool_use_result, list):
-                                    result = (
-                                        message.tool_use_result[0]
-                                        if message.tool_use_result
-                                        else {}
-                                    )
-
-                                    # Convert Claude Code SDK's tool_use_result to OpenCode format
-                                    metadata = convert_to_opencode_metadata(
-                                        tool_use.name,
-                                        result,  # ty:ignore[invalid-argument-type]
-                                        tool_input,
-                                    )  # type: ignore[assignment]
-
-                                # Also emit ToolCallCompleteEvent for consumers that expect it
-                                yield ToolCallCompleteEvent(
-                                    tool_name=_strip_mcp_prefix(tool_use.name),
-                                    tool_call_id=tc_id,
-                                    tool_input=tool_input,
-                                    tool_result=result_content,
-                                    agent_name=self.name,
-                                    message_id="",
-                                    metadata=metadata,
-                                )
-                                # Add tool return as ModelRequest
-                                model_messages.append(ModelRequest(parts=[return_part]))
-
-                    # Handle StreamEvent for real-time streaming
-                    elif isinstance(message, StreamEvent):
-                        event_data = message.event
-                        match event_data:
-                            # content_block_start events
-                            case RawContentBlockStartEvent(
+                        # Handle StreamEvent for real-time streaming
+                        case StreamEvent(
+                            event=RawContentBlockStartEvent(
                                 index=index, content_block=AnthTextBlock()
-                            ):
-                                yield PartStartEvent.text(index=index, content="")
+                            )
+                        ):
+                            yield PartStartEvent.text(index=index, content="")
 
-                            case RawContentBlockStartEvent(
+                        case StreamEvent(
+                            event=RawContentBlockStartEvent(
                                 index=index, content_block=AnthThinkingBlock()
-                            ):
-                                yield PartStartEvent.thinking(index=index, content="")
+                            )
+                        ):
+                            yield PartStartEvent.thinking(index=index, content="")
 
-                            case RawContentBlockStartEvent(
+                        case StreamEvent(
+                            event=RawContentBlockStartEvent(
                                 content_block=AnthToolUseBlock(id=tc_id, name=raw_tool_name)
-                            ):
-                                # Emit ToolCallStartEvent early (args still streaming)
-                                tool_name = _strip_mcp_prefix(raw_tool_name)
-                                tool_accumulator.start(tc_id, tool_name)
-                                # Track for permission matching - callback uses raw name
-                                self._pending_tool_call_ids[raw_tool_name] = tc_id
-                                # Derive rich info with empty args for now
-                                rich_info = derive_rich_tool_info(raw_tool_name, {})
-                                emitted_tool_starts.add(tc_id)
-                                yield ToolCallStartEvent(
-                                    tool_call_id=tc_id,
-                                    tool_name=tool_name,
-                                    title=rich_info.title,
-                                    kind=rich_info.kind,
-                                    locations=[],  # No locations yet, args not complete
-                                    content=rich_info.content,
-                                    raw_input={},  # Empty, will be filled when complete
-                                )
+                            )
+                        ):
+                            # Emit ToolCallStartEvent early (args still streaming)
+                            tool_name = _strip_mcp_prefix(raw_tool_name)
+                            tool_accumulator.start(tc_id, tool_name)
+                            # Derive rich info with empty args for now
+                            rich_info = derive_rich_tool_info(raw_tool_name, {})
+                            emitted_tool_starts.add(tc_id)
+                            yield ToolCallStartEvent(
+                                tool_call_id=tc_id,
+                                tool_name=tool_name,
+                                title=rich_info.title,
+                                kind=rich_info.kind,
+                                locations=[],  # No locations yet, args not complete
+                                content=rich_info.content,
+                                raw_input={},  # Empty, will be filled when complete
+                            )
 
-                            # content_block_delta events
-                            case RawContentBlockDeltaEvent(
-                                index=index, delta=TextDelta(text=text)
-                            ) if text:
-                                yield PartDeltaEvent.text(index=index, content=text)
-                            case RawContentBlockDeltaEvent(
+                        # content_block_delta events
+                        case StreamEvent(
+                            event=RawContentBlockDeltaEvent(index=index, delta=TextDelta(text=text))
+                        ) if text:
+                            yield PartDeltaEvent.text(index=index, content=text)
+                        case StreamEvent(
+                            event=RawContentBlockDeltaEvent(
                                 index=index, delta=ThinkingDelta(thinking=thinking)
-                            ) if thinking:
-                                yield PartDeltaEvent.thinking(index=index, content=thinking)
-                            case RawContentBlockDeltaEvent(
+                            )
+                        ) if thinking:
+                            yield PartDeltaEvent.thinking(index=index, content=thinking)
+                        case StreamEvent(
+                            event=RawContentBlockDeltaEvent(
                                 index=index, delta=InputJSONDelta(partial_json=partial_json)
-                            ) if partial_json:
-                                # Accumulate tool argument JSON fragments
-                                # Find which tool call this belongs to by index
-                                for tc_id in tool_accumulator._calls:
-                                    tool_accumulator.add_args(tc_id, partial_json)
-                                    tool_delta = ToolCallPartDelta(
-                                        args_delta=partial_json,
-                                        tool_call_id=tc_id,
-                                    )
-                                    yield PartDeltaEvent(index=index, delta=tool_delta)
-                                    break  # Only one tool call streams at a time
+                            )
+                        ) if partial_json:
+                            # Accumulate tool argument JSON fragments
+                            # Find which tool call this belongs to by index
+                            for tc_id in tool_accumulator._calls:
+                                tool_accumulator.add_args(tc_id, partial_json)
+                                tool_delta = ToolCallPartDelta(
+                                    args_delta=partial_json,
+                                    tool_call_id=tc_id,
+                                )
+                                yield PartDeltaEvent(index=index, delta=tool_delta)
+                                break  # Only one tool call streams at a time
 
-                            # content_block_stop events
-                            case RawContentBlockStopEvent(index=index):
-                                # Emit with empty part - content was accumulated via deltas
-                                yield PartEndEvent(index=index, part=TextPart(content=""))
+                        # content_block_stop events
+                        case StreamEvent(event=RawContentBlockStopEvent(index=index)):
+                            # Emit with empty part - content was accumulated via deltas
+                            yield PartEndEvent(index=index, part=TextPart(content=""))
 
-                            case _:
-                                pass  # Ignore other event types (message_start, etc.)
+                        case StreamEvent():
+                            # Ignore other StreamEvent types (message_start, etc.)
+                            # Skip further processing - don't duplicate
+                            continue
 
-                        # Skip further processing for StreamEvent - don't duplicate
-                        continue
-
-                    # Convert to events and yield
-                    # (skip AssistantMessage - already streamed via StreamEvent)
-                    if not isinstance(message, AssistantMessage):
-                        for event in claude_message_to_events(message, agent_name=self.name):
-                            yield event
+                        # All other message types (ResultMessage, InitSystemMessage, etc.)
+                        # fall through to post-match processing below
 
                     # Check for result (end of response) and capture usage info
                     if isinstance(message, ResultMessage):

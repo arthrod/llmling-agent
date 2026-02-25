@@ -20,9 +20,8 @@ from clawd_code_sdk.models.output_types import (
     TodoWriteOutput,
     WriteOutput,
 )
-from pydantic_ai import PartDeltaEvent, RequestUsage, RunUsage, TextPartDelta, ThinkingPartDelta
+from pydantic_ai import RequestUsage, RunUsage
 
-from agentpool.agents.events import ToolCallCompleteEvent, ToolCallStartEvent
 from agentpool_server.opencode_server.models.tool_metadata import (
     BashMetadata,
     EditMetadata,
@@ -36,8 +35,6 @@ from agentpool_server.opencode_server.models.tool_metadata import (
 
 if TYPE_CHECKING:
     from clawd_code_sdk import (
-        ContentBlock,
-        Message,
         PermissionResult,
         ThinkingConfig,
     )
@@ -45,7 +42,6 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models.output_types import StructuredPatchHunk
 
     from agentpool.agents.context import ConfirmationResult
-    from agentpool.agents.events import RichAgentStreamEvent
     from agentpool_config.mcp_server import MCPServerConfig as NativeMCPServerConfig
     from agentpool_server.opencode_server.models.tool_metadata import ToolMetadata
 
@@ -82,40 +78,6 @@ def to_request_usage(usage_dict: Usage) -> RequestUsage:
     )
 
 
-def content_block_to_event(block: ContentBlock, index: int = 0) -> RichAgentStreamEvent[Any] | None:
-    """Convert a Claude SDK ContentBlock to a streaming event.
-
-    Args:
-        block: Claude SDK content block
-        index: Part index for the event
-
-    Returns:
-        Corresponding streaming event, or None if not mappable
-    """
-    from clawd_code_sdk import TextBlock, ThinkingBlock, ToolUseBlock
-
-    from agentpool.agents.events.infer_info import derive_rich_tool_info
-
-    match block:
-        case TextBlock(text=text):
-            return PartDeltaEvent(index=index, delta=TextPartDelta(content_delta=text))
-        case ThinkingBlock(thinking=thinking):
-            return PartDeltaEvent(index=index, delta=ThinkingPartDelta(content_delta=thinking))
-        case ToolUseBlock(id=tool_id, name=name, input=input_data):
-            rich_info = derive_rich_tool_info(name, input_data)
-            return ToolCallStartEvent(
-                tool_call_id=tool_id,
-                tool_name=name,
-                title=rich_info.title,
-                kind=rich_info.kind,
-                locations=rich_info.locations,
-                content=rich_info.content,
-                raw_input=cast(dict[str, Any], input_data),
-            )
-        case _:
-            return None
-
-
 def confirmation_result_to_native(result: ConfirmationResult) -> PermissionResult:
     from clawd_code_sdk import PermissionResultAllow, PermissionResultDeny
 
@@ -139,55 +101,6 @@ def to_claude_system_prompt(
         # Use SystemPromptPreset to append to builtin prompt
         return SystemPromptPreset(type="preset", preset="claude_code", append=system_prompt)
     return system_prompt
-
-
-def claude_message_to_events(
-    message: Message,
-    agent_name: str = "",
-) -> list[RichAgentStreamEvent[Any]]:
-    """Convert a Claude SDK Message to a list of streaming events.
-
-    Args:
-        message: Claude SDK message (UserMessage, AssistantMessage, etc.)
-        agent_name: Name of the agent for event attribution
-
-    Returns:
-        List of corresponding streaming events
-    """
-    from clawd_code_sdk import AssistantMessage, ToolResultBlock, ToolUseBlock
-
-    pending_tool_calls = {}
-    events: list[RichAgentStreamEvent[Any]] = []
-    match message:
-        case AssistantMessage(content=content):
-            for idx, block in enumerate(content):
-                # Track tool use blocks for later pairing with results
-                if isinstance(block, ToolUseBlock):
-                    pending_tool_calls[block.id] = block
-
-                # Handle tool results - pair with pending tool call
-                if isinstance(block, ToolResultBlock):
-                    if tool_use := pending_tool_calls.pop(block.tool_use_id, None):
-                        complete_event = ToolCallCompleteEvent(
-                            tool_name=tool_use.name,
-                            tool_call_id=block.tool_use_id,
-                            tool_input=cast(dict[str, Any], tool_use.input),
-                            tool_result=block.get_parsed_content(),
-                            agent_name=agent_name,
-                            message_id="",
-                        )
-                        events.append(complete_event)
-                    continue
-
-                # Convert other blocks to events
-                if event := content_block_to_event(block, index=idx):
-                    events.append(event)
-
-        case _:
-            # UserMessage, InitSystemMessage, ResultMessage - no events to emit
-            pass
-
-    return events
 
 
 def convert_mcp_servers_to_sdk_format(
