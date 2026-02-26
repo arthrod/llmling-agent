@@ -66,7 +66,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable, Iterator, Sequence
 
     from agentpool.agents.events import ToolCallContentItem
-    from agentpool.agents.events.events import RichAgentStreamEvent
+    from agentpool.agents.events.events import RichAgentStreamEvent, SubAgentType
     from agentpool.messaging.messages import TokenCost
     from agentpool_server.opencode_server.models import MessageWithParts
     from agentpool_server.opencode_server.models.events import Event
@@ -509,7 +509,7 @@ class OpenCodeStreamAdapter:
     def _on_subagent(
         self,
         source_name: str,
-        source_type: str,
+        source_type: SubAgentType,
         wrapped_event: RichAgentStreamEvent[Any],
         depth: int,
     ) -> Iterator[Event]:
