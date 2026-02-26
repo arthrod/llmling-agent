@@ -549,7 +549,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             max_buffer_size=10 * 1024 * 1024,
             output_schema=self._output_type if self._output_type is not str else None,
             mcp_servers=self._mcp_servers or {},
-            hooks=self._hook_manager.build_hooks(),  # type: ignore[arg-type]
+            hooks=self._hook_manager.build_hooks(),
             setting_sources=self._setting_sources,
             chrome="Chrome" in builtin_tools,
             session=session,

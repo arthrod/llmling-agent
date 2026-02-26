@@ -8,7 +8,7 @@ Centralizes all hook-related logic:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from agentpool.log import get_logger
 
@@ -16,7 +16,13 @@ from agentpool.log import get_logger
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
-    from clawd_code_sdk.models import HookContext, HookInput, HookMatcher, SyncHookJSONOutput
+    from clawd_code_sdk.models import (
+        HookContext,
+        HookEvent,
+        HookInput,
+        HookMatcher,
+        SyncHookJSONOutput,
+    )
     from exxec import ExecutionEnvironment
 
     from agentpool.agents.prompt_injection import PromptInjectionManager
@@ -58,7 +64,7 @@ class ClaudeCodeHookManager:
         self._set_mode = set_mode
         self._env = env
 
-    def build_hooks(self) -> dict[str, list[HookMatcher]]:
+    def build_hooks(self) -> dict[HookEvent, list[HookMatcher]]:
         """Build complete SDK hooks configuration.
 
         Combines:
@@ -72,7 +78,7 @@ class ClaudeCodeHookManager:
 
         from agentpool.agents.claude_code_agent.converters import build_sdk_hooks_from_agent_hooks
 
-        result: dict[str, list[Any]] = {}
+        result: dict[HookEvent, list[HookMatcher]] = {}
         # Add PostToolUse hook for injection
         result["PostToolUse"] = [HookMatcher(matcher="*", hooks=[self._on_post_tool_use])]
         # Merge AgentHooks if present

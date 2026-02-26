@@ -35,7 +35,7 @@ from agentpool_server.opencode_server.models.tool_metadata import (
 
 if TYPE_CHECKING:
     from clawd_code_sdk import PermissionResult, ThinkingConfig
-    from clawd_code_sdk.models import StopReason, SystemPromptPreset, ToolInput, Usage
+    from clawd_code_sdk.models import HookEvent, StopReason, SystemPromptPreset, ToolInput, Usage
     from clawd_code_sdk.models.output_types import StructuredPatchHunk
     from exxec import ExecutionEnvironment
     from pydantic_ai import FinishReason
@@ -386,7 +386,7 @@ def build_sdk_hooks_from_agent_hooks(
     hooks: AgentHooks,
     agent_name: str,
     env: ExecutionEnvironment | None = None,
-) -> dict[str, list[Any]]:
+) -> dict[HookEvent, list[Any]]:
     """Convert AgentHooks to Claude SDK hooks format.
 
     Args:
@@ -399,7 +399,7 @@ def build_sdk_hooks_from_agent_hooks(
     """
     from clawd_code_sdk.models import HookMatcher
 
-    result: dict[str, list[Any]] = {}
+    result: dict[HookEvent, list[Any]] = {}
 
     if not hooks:
         return result
