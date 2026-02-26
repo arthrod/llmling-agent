@@ -531,6 +531,7 @@ class ToolManagerBridge:
                 tool_name=tool.name,
                 tool_input=kwargs,
                 session_id=None,
+                env=self.node.env,
             )
             if pre_result.get("decision") == "deny":
                 reason = pre_result.get("reason", "Blocked by pre-tool hook")
@@ -567,6 +568,7 @@ class ToolManagerBridge:
                 tool_output=result,
                 duration_ms=duration_ms,
                 session_id=None,
+                env=self.node.env,
             )
 
         return result

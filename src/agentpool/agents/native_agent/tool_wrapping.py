@@ -101,8 +101,9 @@ def wrap_tool[TReturn](  # noqa: PLR0915
                 tool_name=tool.name,
                 tool_input=tool_input,
                 session_id=None,  # Could be passed through if needed
+                env=agent_ctx.agent.env,
             )
-            if pre_result.get("decision") == "deny":
+            if pre_result["decision"] == "deny":
                 reason = pre_result.get("reason", "Blocked by pre-tool hook")
                 raise ToolSkippedError(f"Tool {tool.name} blocked: {reason}")
             # Apply modified input if provided
@@ -127,6 +128,7 @@ def wrap_tool[TReturn](  # noqa: PLR0915
                 tool_output=result,
                 duration_ms=duration_ms,
                 session_id=None,
+                env=agent_ctx.agent.env,
             )
 
             # Inject additional context if provided by hooks

@@ -13,6 +13,8 @@ from agentpool.log import get_logger
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from exxec import ExecutionEnvironment
+
     from agentpool.hooks.base import Hook
 
 
@@ -48,6 +50,7 @@ class AgentHooks:
         agent_name: str,
         prompt: str,
         session_id: str | None = None,
+        env: ExecutionEnvironment | None = None,
     ) -> HookResult:
         """Execute pre-run hooks.
 
@@ -55,6 +58,7 @@ class AgentHooks:
             agent_name: Name of the agent.
             prompt: The prompt being processed.
             session_id: Optional conversation identifier.
+            env: Agent's execution environment, passed to command hooks.
 
         Returns:
             Combined hook result. If any hook denies, the run should be blocked.
@@ -65,7 +69,7 @@ class AgentHooks:
             prompt=prompt,
             session_id=session_id,
         )
-        return await self._run_hooks(self.pre_run, input_data)
+        return await self._run_hooks(self.pre_run, input_data, env=env)
 
     async def run_post_run_hooks(
         self,
@@ -74,6 +78,7 @@ class AgentHooks:
         prompt: str,
         result: Any,
         session_id: str | None = None,
+        env: ExecutionEnvironment | None = None,
     ) -> HookResult:
         """Execute post-run hooks.
 
@@ -82,6 +87,7 @@ class AgentHooks:
             prompt: The prompt that was processed.
             result: The result from the run.
             session_id: Optional conversation identifier.
+            env: Agent's execution environment, passed to command hooks.
 
         Returns:
             Combined hook result.
@@ -93,7 +99,7 @@ class AgentHooks:
             result=result,
             session_id=session_id,
         )
-        return await self._run_hooks(self.post_run, input_data)
+        return await self._run_hooks(self.post_run, input_data, env=env)
 
     async def run_pre_tool_hooks(
         self,
@@ -102,6 +108,7 @@ class AgentHooks:
         tool_name: str,
         tool_input: dict[str, Any],
         session_id: str | None = None,
+        env: ExecutionEnvironment | None = None,
     ) -> HookResult:
         """Execute pre-tool-use hooks.
 
@@ -110,6 +117,7 @@ class AgentHooks:
             tool_name: Name of the tool being called.
             tool_input: Input arguments for the tool.
             session_id: Optional conversation identifier.
+            env: Agent's execution environment, passed to command hooks.
 
         Returns:
             Combined hook result. If any hook denies, the tool call should be blocked.
@@ -122,7 +130,7 @@ class AgentHooks:
             tool_input=tool_input,
             session_id=session_id,
         )
-        return await self._run_hooks(self.pre_tool_use, input_data)
+        return await self._run_hooks(self.pre_tool_use, input_data, env=env)
 
     async def run_post_tool_hooks(
         self,
@@ -133,6 +141,7 @@ class AgentHooks:
         tool_output: Any,
         duration_ms: float,
         session_id: str | None = None,
+        env: ExecutionEnvironment | None = None,
     ) -> HookResult:
         """Execute post-tool-use hooks.
 
@@ -143,6 +152,7 @@ class AgentHooks:
             tool_output: Output from the tool.
             duration_ms: How long the tool took to execute.
             session_id: Optional conversation identifier.
+            env: Agent's execution environment, passed to command hooks.
 
         Returns:
             Combined hook result. May include additional_context to inject.
@@ -156,10 +166,15 @@ class AgentHooks:
             duration_ms=duration_ms,
             session_id=session_id,
         )
-        return await self._run_hooks(self.post_tool_use, input_data)
+        return await self._run_hooks(self.post_tool_use, input_data, env=env)
 
     @staticmethod
-    async def _run_hooks(hooks: Sequence[Hook], input_data: HookInput) -> HookResult:
+    async def _run_hooks(
+        hooks: Sequence[Hook],
+        input_data: HookInput,
+        *,
+        env: ExecutionEnvironment | None = None,
+    ) -> HookResult:
         """Run a list of hooks and combine their results.
 
         Hooks are run in parallel. Results are combined:
@@ -173,6 +188,7 @@ class AgentHooks:
         Args:
             hooks: List of hooks to execute.
             input_data: Input data for the hooks.
+            env: Agent's execution environment, passed through to hooks.
 
         Returns:
             Combined hook result.
@@ -187,7 +203,7 @@ class AgentHooks:
 
         # Run all matching hooks in parallel
         raw_results = await asyncio.gather(
-            *(hook.execute(input_data) for hook in matching),
+            *(hook.execute(input_data, env=env) for hook in matching),
             return_exceptions=True,
         )
 

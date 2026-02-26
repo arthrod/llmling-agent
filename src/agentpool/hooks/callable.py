@@ -13,6 +13,8 @@ from agentpool.utils.importing import import_callable
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from exxec import ExecutionEnvironment
+
     from agentpool.hooks.base import HookEvent, HookInput
 
 
@@ -65,11 +67,16 @@ class CallableHook(Hook):
             self._callable = import_callable(self._import_path)
         return self._callable
 
-    async def execute(self, input_data: HookInput) -> HookResult:
+    async def execute(
+        self,
+        input_data: HookInput,
+        env: ExecutionEnvironment | None = None,
+    ) -> HookResult:
         """Execute the callable.
 
         Args:
             input_data: The hook input data.
+            env: Unused. Callable hooks always run in-process.
 
         Returns:
             Hook result from callable.

@@ -349,6 +349,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             agent_hooks=hooks,
             injection_manager=self._injection_manager,
             set_mode=self._set_mode,
+            env=self.env,
         )
 
     @classmethod

@@ -14,6 +14,8 @@ from agentpool.log import get_logger
 
 
 if TYPE_CHECKING:
+    from exxec import ExecutionEnvironment
+
     from agentpool.hooks.base import HookEvent, HookInput
 
 
@@ -63,11 +65,16 @@ class PromptHook(Hook):
         self.prompt_template = prompt
         self.model = model or DEFAULT_HOOK_MODEL
 
-    async def execute(self, input_data: HookInput) -> HookResult:
+    async def execute(
+        self,
+        input_data: HookInput,
+        env: ExecutionEnvironment | None = None,
+    ) -> HookResult:
         """Execute the LLM evaluation.
 
         Args:
             input_data: The hook input data.
+            env: Unused. Prompt hooks always run locally via LLM call.
 
         Returns:
             Hook result from LLM.

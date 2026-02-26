@@ -37,9 +37,11 @@ if TYPE_CHECKING:
     from clawd_code_sdk import PermissionResult, ThinkingConfig
     from clawd_code_sdk.models import StopReason, SystemPromptPreset, ToolInput, Usage
     from clawd_code_sdk.models.output_types import StructuredPatchHunk
+    from exxec import ExecutionEnvironment
     from pydantic_ai import FinishReason
 
     from agentpool.agents.context import ConfirmationResult
+    from agentpool.hooks import AgentHooks
     from agentpool_config.mcp_server import MCPServerConfig as NativeMCPServerConfig
     from agentpool_server.opencode_server.models.tool_metadata import ToolMetadata
 
@@ -381,14 +383,16 @@ def _count_diff_changes(structured_patch: list[StructuredPatchHunk]) -> tuple[in
 
 
 def build_sdk_hooks_from_agent_hooks(
-    hooks: Any,  # AgentHooks
+    hooks: AgentHooks,
     agent_name: str,
+    env: ExecutionEnvironment | None = None,
 ) -> dict[str, list[Any]]:
     """Convert AgentHooks to Claude SDK hooks format.
 
     Args:
         hooks: AgentHooks instance with pre/post tool hooks
         agent_name: Name of the agent for context
+        env: Agent's execution environment, passed to command hooks
 
     Returns:
         Dictionary mapping hook event names to HookMatcher lists
@@ -417,6 +421,7 @@ def build_sdk_hooks_from_agent_hooks(
                 tool_name=tool_name,
                 tool_input=tool_input,
                 session_id=input_data.get("session_id"),
+                env=env,
             )
 
             # Convert our hook result to SDK format
@@ -463,6 +468,7 @@ def build_sdk_hooks_from_agent_hooks(
                 tool_output=tool_response,
                 duration_ms=0,  # SDK doesn't provide timing
                 session_id=input_data.get("session_id"),
+                env=env,
             )
 
             # Post hooks are observation-only in SDK, can add context

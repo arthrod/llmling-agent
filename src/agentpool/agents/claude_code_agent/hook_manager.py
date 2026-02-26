@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
     from clawd_code_sdk.models import HookContext, HookInput, HookMatcher, SyncHookJSONOutput
+    from exxec import ExecutionEnvironment
 
     from agentpool.agents.prompt_injection import PromptInjectionManager
     from agentpool.hooks import AgentHooks
@@ -40,6 +41,7 @@ class ClaudeCodeHookManager:
         agent_hooks: AgentHooks | None = None,
         injection_manager: PromptInjectionManager | None = None,
         set_mode: Callable[[str, str], Awaitable[None]] | None = None,
+        env: ExecutionEnvironment | None = None,
     ) -> None:
         """Initialize hook manager.
 
@@ -48,11 +50,13 @@ class ClaudeCodeHookManager:
             agent_hooks: Optional AgentHooks for pre/post tool hooks
             injection_manager: Shared injection manager from BaseAgent
             set_mode: Callback to set agent mode (mode_id, category_id)
+            env: Agent's execution environment, passed to command hooks
         """
         self.agent_name = agent_name
         self.agent_hooks = agent_hooks
         self._injection_manager = injection_manager
         self._set_mode = set_mode
+        self._env = env
 
     def build_hooks(self) -> dict[str, list[HookMatcher]]:
         """Build complete SDK hooks configuration.
@@ -73,7 +77,9 @@ class ClaudeCodeHookManager:
         result["PostToolUse"] = [HookMatcher(matcher="*", hooks=[self._on_post_tool_use])]
         # Merge AgentHooks if present
         if self.agent_hooks:
-            agent_hooks = build_sdk_hooks_from_agent_hooks(self.agent_hooks, self.agent_name)
+            agent_hooks = build_sdk_hooks_from_agent_hooks(
+                self.agent_hooks, self.agent_name, env=self._env
+            )
             for event_name, matchers in agent_hooks.items():
                 if event_name in result:
                     result[event_name].extend(matchers)

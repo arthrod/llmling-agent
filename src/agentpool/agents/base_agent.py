@@ -718,6 +718,7 @@ class BaseAgent[TDeps = None, TResult = str](MessageNode[TDeps, TResult]):
                     agent_name=self.name,
                     prompt=str(user_msg.content),  # TODO: allow UserContent for hook?
                     session_id=self.session_id,
+                    env=self.env,
                 )
                 if pre_run_result.get("decision") == "deny":
                     reason = pre_run_result.get("reason", "Blocked by pre-run hook")
@@ -764,6 +765,7 @@ class BaseAgent[TDeps = None, TResult = str](MessageNode[TDeps, TResult]):
                     prompt=prompt_str,
                     result=final_message.content,
                     session_id=self.session_id,
+                    env=self.env,
                 )
 
             # Emit signal (always - for event handlers)
