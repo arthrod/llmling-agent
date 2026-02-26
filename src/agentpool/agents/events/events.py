@@ -628,9 +628,15 @@ class CompactionEvent:
     """Event type identifier."""
 
     def format(self) -> str:
+        token_info = f" ({self.pre_tokens:,} tokens)" if self.pre_tokens is not None else ""
         if self.trigger == "auto":
-            return "\n\n---\n\n📦 **Context compaction** triggered. Summarizing...\n\n---\n\n"
-        return "\n\n---\n\n📦 **Manual compaction** requested. Summarizing...\n\n---\n\n"
+            return (
+                f"\n\n---\n\n📦 **Context compaction** triggered{token_info}."
+                " Summarizing...\n\n---\n\n"
+            )
+        return (
+            f"\n\n---\n\n📦 **Manual compaction** requested{token_info}. Summarizing...\n\n---\n\n"
+        )
 
 
 type RichAgentStreamEvent[OutputDataT] = (
