@@ -114,6 +114,7 @@ from agentpool.log import get_logger
 from agentpool.messaging import ChatMessage
 from agentpool.messaging.messages import TokenCost
 from agentpool.sessions.models import SessionData
+from agentpool.utils.streams import merge_queue_into_iterator
 from agentpool.utils.time_utils import get_now
 
 
@@ -786,6 +787,7 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
         from clawd_code_sdk import (
             AssistantMessage,
             InitSystemMessage,
+            Message,
             ResultMessage,
             TextBlock,
             ThinkingBlock,
@@ -855,10 +857,15 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             # Persist SDK session ID to storage for cross-referencing
             if self.storage and self.session_id:
                 await self.storage.update_sdk_session_id(self.session_id, self._sdk_session_id)
-            async with self._tool_bridge.set_run_context(
-                deps, effective_input_provider, prompt=prompts
+            async with (
+                self._tool_bridge.set_run_context(deps, effective_input_provider, prompt=prompts),
+                merge_queue_into_iterator(stream, self._event_queue) as merged_events,  # ty: ignore[invalid-argument-type]
             ):
-                async for message in stream:
+                async for event_or_message in merged_events:
+                    if not isinstance(event_or_message, Message):
+                        yield event_or_message
+                        continue
+                    message = event_or_message
                     match message:
                         case AssistantMessage(model=model, content=msg_content):
                             # Track resolved model from provider response

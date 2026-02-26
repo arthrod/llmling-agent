@@ -58,6 +58,7 @@ from agentpool.agents.exceptions import (
 )
 from agentpool.log import get_logger
 from agentpool.messaging import ChatMessage
+from agentpool.utils.streams import merge_queue_into_iterator
 from agentpool.utils.subprocess_utils import SubprocessError, run_with_process_monitor
 from agentpool.utils.token_breakdown import calculate_usage_from_parts
 
@@ -491,10 +492,11 @@ class ACPAgent[TDeps = None](BaseAgent[TDeps, str]):
                     yield native_event
 
         try:
-            async with self._tool_bridge.set_run_context(
-                deps, effective_input_provider, prompt=prompts
+            async with (
+                self._tool_bridge.set_run_context(deps, effective_input_provider, prompt=prompts),
+                merge_queue_into_iterator(poll_acp_events(), self._event_queue) as merged_events,  # ty: ignore[invalid-argument-type]
             ):
-                async for event in poll_acp_events():
+                async for event in merged_events:
                     if self._cancelled:
                         self.log.info("Stream cancelled by user")
                         break
@@ -513,7 +515,7 @@ class ACPAgent[TDeps = None](BaseAgent[TDeps, str]):
                                 ],
                             )
                         event = enriched_event  # noqa: PLW2901
-                    part = event_to_part(event)
+                    part = event_to_part(event)  # ty: ignore[invalid-argument-type]
                     if isinstance(part, TextPart):
                         text_chunks.append(part.content)
                     if part:
