@@ -627,6 +627,11 @@ class CompactionEvent:
     event_kind: Literal["compaction"] = "compaction"
     """Event type identifier."""
 
+    def format(self) -> str:
+        if self.trigger == "auto":
+            return "\n\n---\n\n📦 **Context compaction** triggered. Summarizing...\n\n---\n\n"
+        return "\n\n---\n\n📦 **Manual compaction** requested. Summarizing...\n\n---\n\n"
+
 
 type RichAgentStreamEvent[OutputDataT] = (
     AgentStreamEvent

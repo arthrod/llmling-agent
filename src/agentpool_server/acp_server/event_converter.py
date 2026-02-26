@@ -81,12 +81,6 @@ ACPSessionUpdate = (
 )
 
 
-def get_compaction_text(trigger: str) -> str:
-    if trigger == "auto":
-        return "\n\n---\n\n📦 **Context compaction** triggered. Summarizing...\n\n---\n\n"
-    return "\n\n---\n\n📦 **Manual compaction** requested. Summarizing...\n\n---\n\n"
-
-
 @dataclass
 class _ToolState:
     """Internal state for a single tool call."""
@@ -428,8 +422,8 @@ class ACPEventConverter:
                 ]
                 yield AgentPlanUpdate(entries=acp_entries)
 
-            case CompactionEvent(trigger=trigger, phase="starting"):
-                text = get_compaction_text(trigger)
+            case CompactionEvent(phase="starting"):
+                text = event.format()
                 yield AgentMessageChunk.text(text)
 
             case SubAgentEvent(
