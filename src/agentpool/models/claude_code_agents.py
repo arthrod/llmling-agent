@@ -137,7 +137,7 @@ class ClaudeCodeAgentConfig(BaseAgentConfig):
     model: AnthropicMaxModelName | str | None = Field(
         default="opus",
         title="Model",
-        examples=["claude-sonnet-4-5", "claude-opus-4", "claude-haiku-3-5"],
+        examples=["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5"],
     )
     """Model to use for this agent. Defaults to Claude's default model."""
 
@@ -171,22 +171,14 @@ class ClaudeCodeAgentConfig(BaseAgentConfig):
     Docs: https://phil65.github.io/agentpool/YAML%20Configuration/system_prompts_configuration/
     """
 
-    include_builtin_system_prompt: bool = Field(
-        default=True,
-        title="Include Builtin System Prompt",
-    )
+    include_builtin_system_prompt: bool = Field(default=True, title="Include Builtin System Prompt")
     """Whether to include Claude Code's builtin system prompt.
 
     - true (default): `system_prompt` is appended to the builtin
     - false: Only use `system_prompt`, discard the builtin
     """
 
-    max_turns: int | None = Field(
-        default=None,
-        title="Max Turns",
-        ge=1,
-        examples=[5, 10, 20],
-    )
+    max_turns: int | None = Field(default=None, title="Max Turns", ge=1, examples=[5, 10, 20])
     """Maximum number of conversation turns before stopping."""
 
     max_budget_usd: float | None = Field(

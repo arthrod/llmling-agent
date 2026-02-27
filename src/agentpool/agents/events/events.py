@@ -489,7 +489,7 @@ class ToolCallProgressEvent:
         path: str,
         old_text: str,
         new_text: str,
-        status: Literal["in_progress", "completed", "failed"],
+        status: ToolCallStatus,
         tool_name: str | None = None,
     ) -> ToolCallProgressEvent:
         """Create event for file edit with diff.
