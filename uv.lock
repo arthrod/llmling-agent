@@ -817,7 +817,7 @@ wheels = [
 
 [[package]]
 name = "braintrust"
-version = "0.6.0"
+version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "chevron" },
@@ -831,9 +831,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c0/a9/7ec0d169b7aaa4b4e18927c92f3a37151d2e98a2f2de0fd35b06aaaff2fd/braintrust-0.6.0.tar.gz", hash = "sha256:08057475e064d3feefbc5628eef825234fab6be499258ab6200a91bf5102e9d3", size = 337568, upload-time = "2026-02-25T15:54:58.788Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b9/e3/22e894cbc0d42edf53b77b550b95730243273df645b9807b710158088454/braintrust-0.7.0.tar.gz", hash = "sha256:dd5786c5f087dca0c8c5cf0af7806504fddf23e9c5f0f45f7aeaab35c83aa3e8", size = 356980, upload-time = "2026-02-27T18:52:03.351Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1a/3a/1efb31fc3875980bba562941ab811fb4cf258db556e6f1c34c08d2473c46/braintrust-0.6.0-py3-none-any.whl", hash = "sha256:9ef4a281ca715c99cbc611d29b43fba86a8dfbaf56eddf1eb8f571dc94bbbc46", size = 391307, upload-time = "2026-02-25T15:54:56.605Z" },
+    { url = "https://files.pythonhosted.org/packages/93/f7/707bab2fc31bea9f219f55bb0258aca3ba6fefa222655c19d42838d3c97d/braintrust-0.7.0-py3-none-any.whl", hash = "sha256:f7d965f76da64c6f83b9bd296924c4255a689125119a5c9407e7e763133a8d90", size = 412623, upload-time = "2026-02-27T18:52:01.861Z" },
 ]
 
 [[package]]
@@ -1035,7 +1035,7 @@ wheels = [
 
 [[package]]
 name = "clawd-code-sdk"
-version = "0.3.7"
+version = "0.3.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anthropic" },
@@ -1043,9 +1043,9 @@ dependencies = [
     { name = "anyio" },
     { name = "mcp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/01/d2/a02fb3c9fefdbbd6a22f2adb46d88d3deb11c99b742d72d232e4c5aaa8ec/clawd_code_sdk-0.3.7.tar.gz", hash = "sha256:c6ccb67a8971b0ff0bfc89e02f21e7b400c556e2efeacf32ba8edf7ecc289e1c", size = 126747, upload-time = "2026-02-27T14:22:18.368Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/df/e8/5499e869765e0aec32ccf691e5a6714ca1f7d3f7911cfe25bf81491aa9c0/clawd_code_sdk-0.3.8.tar.gz", hash = "sha256:e4e28d5b0f5fb48c7b2317bb8332019fe1ad9d18f3ee343ff64136e6c9d1b67b", size = 128605, upload-time = "2026-02-27T19:16:59.765Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2a/e7/41244bdd37c5b73711d797683426344aa49a3b40ff8bf173f7cf342183a6/clawd_code_sdk-0.3.7-py3-none-any.whl", hash = "sha256:b4a8d8a3f9dedd954c0bff8bf6e35626e493b7d301b69f034fe44e62888e40d1", size = 97044, upload-time = "2026-02-27T14:22:09.439Z" },
+    { url = "https://files.pythonhosted.org/packages/1c/a9/14ea70673c308d98f344b1947e4492d2512a8c2ec40480a1bdd30b01abda/clawd_code_sdk-0.3.8-py3-none-any.whl", hash = "sha256:4094d0dfdda2e72dbdd66f27f6e0e34cac13515d7793deee5319d3f562d7a980", size = 98120, upload-time = "2026-02-27T19:17:01.969Z" },
 ]
 
 [[package]]
@@ -1532,7 +1532,7 @@ all = [
 
 [[package]]
 name = "exa-py"
-version = "2.6.0"
+version = "2.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpcore" },
@@ -1543,9 +1543,9 @@ dependencies = [
     { name = "requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e6/c0/45d0ffeaa5532e16b80e327fec61681e0890c82c5e428ae5eeffbbe6cb6e/exa_py-2.6.0.tar.gz", hash = "sha256:7a91dfd69ea38375bdfdbce40afc10f853034cd53b7876e6c5a8f8b36710ec86", size = 48799, upload-time = "2026-02-27T02:45:04.139Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/99/e6/2686edc471a24d85d6be3292e80eb18c473574a0918d569595045afc0ffc/exa_py-2.6.1.tar.gz", hash = "sha256:35cc24091ec181966763a17c452d756dfd169710a0faeab837bc5a7ae544702e", size = 49344, upload-time = "2026-02-27T18:57:46.946Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fe/da/9111d5e00542a6405ce8219e5d265379cf7376db54531749909736a0830d/exa_py-2.6.0-py3-none-any.whl", hash = "sha256:8ad05670f123097885921ae00169c4fd2beb933e82b95d14270dc7bc25b71856", size = 63764, upload-time = "2026-02-27T02:45:03.094Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/20/390810631364cf8284359c851ddaa509a7fdaf72772eccbcbb14f72ede93/exa_py-2.6.1-py3-none-any.whl", hash = "sha256:8eb1b55fcb6c28bd5bf3943d5821fdf065024c7a71cb1ad9f4ae93e3ab78de94", size = 64234, upload-time = "2026-02-27T18:57:48.971Z" },
 ]
 
 [[package]]
