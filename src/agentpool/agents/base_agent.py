@@ -757,12 +757,9 @@ class BaseAgent[TDeps = None, TResult = str](MessageNode[TDeps, TResult]):
         if final_message is not None:
             # Execute post-run hooks
             if self.hooks:
-                prompt_str = (
-                    user_msg.content if isinstance(user_msg.content, str) else str(user_msg.content)
-                )
                 await self.hooks.run_post_run_hooks(
                     agent_name=self.name,
-                    prompt=prompt_str,
+                    prompt=str(user_msg.content),
                     result=final_message.content,
                     session_id=self.session_id,
                     env=self.env,
