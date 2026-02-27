@@ -1052,7 +1052,7 @@ class FSSpecTools(ResourceProvider):
         # with self.fs.open(path, "r", encoding="utf-8") as f:
         #     return f.read()
         val = await self._get_fs(agent_ctx)._cat(path)
-        return val.decode() if isinstance(val, bytes) else val  # type: ignore[no-any-return]
+        return val.decode() if isinstance(val, bytes) else val  # pyright: ignore[reportReturnType]
 
     async def _write(self, agent_ctx: AgentContext, path: str, content: str | bytes) -> None:
         if isinstance(content, str):
