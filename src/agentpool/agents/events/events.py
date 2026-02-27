@@ -45,6 +45,7 @@ SubAgentType = Literal["agent", "team_parallel", "team_sequential"]
 # Lifecycle events (aligned with AG-UI protocol)
 CompactionTrigger = Literal["auto", "manual"]
 CompactionPhase = Literal["starting", "completed"]
+ToolCallStatus = Literal["pending", "in_progress", "completed", "failed"]
 
 
 class PartStartEvent(PyAIPartStartEvent):
@@ -239,7 +240,7 @@ class ToolCallProgressEvent:
 
     tool_call_id: str
     """The ID of the tool call."""
-    status: Literal["pending", "in_progress", "completed", "failed"] = "in_progress"
+    status: ToolCallStatus = "in_progress"
     """Current execution status."""
     title: str | None = None
     """Human-readable title describing the operation."""

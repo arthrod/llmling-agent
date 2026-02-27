@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 logger = get_logger(__name__)
-
+AgentFileFormat = Literal["claude", "opencode", "native"]
 
 # Claude Code model alias mapping
 CLAUDE_MODEL_ALIASES: dict[str, str] = {
@@ -90,7 +90,7 @@ def extract_frontmatter(content: str, file_path: str) -> tuple[dict[str, Any], s
     return metadata, system_prompt
 
 
-def detect_format(metadata: dict[str, Any]) -> Literal["claude", "opencode", "native"]:
+def detect_format(metadata: dict[str, Any]) -> AgentFileFormat:
     """Detect the file format based on frontmatter content.
 
     Args:
@@ -269,10 +269,7 @@ def parse_opencode_format(
     return config_kwargs
 
 
-def parse_native_format(
-    metadata: dict[str, Any],
-    system_prompt: str,
-) -> dict[str, Any]:
+def parse_native_format(metadata: dict[str, Any], system_prompt: str) -> dict[str, Any]:
     """Parse native format frontmatter.
 
     This format allows full NativeAgentConfig fields in the frontmatter,
@@ -298,7 +295,7 @@ def parse_native_format(
 def parse_agent_file(
     file_path: str,
     *,
-    file_format: Literal["claude", "opencode", "native", "auto"] = "auto",
+    file_format: AgentFileFormat | Literal["auto"] = "auto",
     skills_registry: Any | None = None,
 ) -> NativeAgentConfig:
     """Parse agent markdown file to NativeAgentConfig.
