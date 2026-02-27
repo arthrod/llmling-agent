@@ -586,14 +586,17 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
 
         # For "default" mode and non-edit tools in "acceptEdits" mode:
         # Ask for confirmation via input provider
-        if self._input_provider:
+        if input_provider := self._tool_bridge._current_input_provider:
             tool_call_id = context.tool_use_id
             display_name = _strip_mcp_prefix(tool_name)
             self.log.debug("Permission request", tool_name=display_name, tool_call_id=tool_call_id)
             ctx = self.get_context(
-                tool_call_id=tool_call_id, tool_input=input_dict, tool_name=tool_name
+                tool_call_id=tool_call_id,
+                tool_input=input_dict,
+                tool_name=tool_name,
+                input_provider=input_provider,
             )
-            result = await self._input_provider.get_tool_confirmation(
+            result = await input_provider.get_tool_confirmation(
                 context=ctx,
                 tool_name=display_name,
                 tool_description=f"Claude Code tool: {tool_name}",
