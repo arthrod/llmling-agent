@@ -57,6 +57,7 @@ async def _stream_task(
     *,
     batch_deltas: bool = False,
     depth: int = 1,
+    parent_tool_call_id: str | None = None,
 ) -> str:
     """Stream a task's execution, emitting SubAgentEvents into parent stream.
 
@@ -67,6 +68,7 @@ async def _stream_task(
         stream: Async iterator of stream events from agent.run_stream()
         batch_deltas: If True, batch consecutive text/thinking deltas for fewer UI updates
         depth: Nesting depth for nested task delegation
+        parent_tool_call_id: Tool call ID of the parent task that spawned this subagent
 
     Returns:
         Final text content from the stream
@@ -83,6 +85,7 @@ async def _stream_task(
                 source_type=event.source_type,
                 event=event.event,
                 depth=event.depth + depth,
+                parent_tool_call_id=event.parent_tool_call_id,
             )
             await ctx.events.emit_event(nested_event)
         else:
@@ -92,6 +95,7 @@ async def _stream_task(
                 source_type=source_type,
                 event=event,
                 depth=depth,
+                parent_tool_call_id=parent_tool_call_id,
             )
             await ctx.events.emit_event(subagent_event)
 
@@ -322,4 +326,5 @@ class SubagentTools(StaticResourceProvider):
             source_type=source_type,
             stream=node.run_stream(prompt),
             batch_deltas=self._batch_stream_deltas,
+            parent_tool_call_id=ctx.tool_call_id,
         )

@@ -604,6 +604,8 @@ class SubAgentEvent:
     """The actual event from the subagent/team."""
     depth: int = 1
     """Nesting depth (1 = direct child, 2 = grandchild, etc.)."""
+    parent_tool_call_id: str | None = None
+    """Tool call ID of the parent task tool that spawned this subagent."""
     event_kind: Literal["subagent"] = "subagent"
     """Event type identifier."""
 
