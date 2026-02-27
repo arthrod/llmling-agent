@@ -90,6 +90,8 @@ class AgentDefinition(Schema):
     mcp_servers: dict[str, MCPServerConfig] | None = None
     """Configuration for MCP servers."""
 
+    background: bool | None = None
+    """Run as background agent."""
     # critical_system_reminder_experimental: str | None = None
 
 
