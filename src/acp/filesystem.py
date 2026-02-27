@@ -482,7 +482,7 @@ class ACPFileSystem(BaseAsyncFileSystem[ACPPath, AcpInfo]):
             # Fall back to default fsspec implementation (walks tree with _ls)
             return await super()._find(path, maxdepth=maxdepth, withdirs=withdirs, **kwargs)  # type: ignore[no-any-return]
 
-        detail = kwargs.pop("detail", False)
+        detail = kwargs.get("detail", False)
         stripped = self._strip_protocol(path)
         search_path = stripped if isinstance(stripped, str) else stripped[0]
 
