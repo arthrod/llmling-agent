@@ -10,16 +10,23 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, assert_never, cast
 
-from clawd_code_sdk import McpServerConfig
-from clawd_code_sdk.models import BashInput
-from clawd_code_sdk.models.output_types import (
+from clawd_code_sdk import (
+    McpServerConfig,
+    UserDocumentPrompt,
+    UserDocumentURLPrompt,
+    UserImageURLPrompt,
+)
+from clawd_code_sdk.models import (
+    BashInput,
     BashOutput,
     EditOutput,
     ReadOutput,
     TodoWriteOutput,
+    UserTextPrompt,
     WriteOutput,
 )
-from pydantic_ai import RequestUsage, RunUsage
+from clawd_code_sdk.models.messages import UserImagePrompt
+from pydantic_ai import BinaryContent, FileUrl, ImageUrl, RequestUsage, RunUsage
 
 from agentpool.utils.diffs import compute_unified_diff
 from agentpool_server.opencode_server.models.tool_metadata import (
@@ -34,11 +41,19 @@ from agentpool_server.opencode_server.models.tool_metadata import (
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
+
     from clawd_code_sdk import PermissionResult, ThinkingConfig
-    from clawd_code_sdk.models import HookEvent, StopReason, ToolInput, Usage
+    from clawd_code_sdk.models import (
+        HookEvent,
+        StopReason,
+        ToolInput,
+        Usage,
+        UserPrompt,
+    )
     from clawd_code_sdk.models.output_types import StructuredPatchHunk
     from exxec import ExecutionEnvironment
-    from pydantic_ai import FinishReason
+    from pydantic_ai import FinishReason, UserContent
 
     from agentpool.agents.context import ConfirmationResult
     from agentpool.hooks import AgentHooks
@@ -52,12 +67,27 @@ def to_thinking_config(
     from clawd_code_sdk import ThinkingConfigAdaptive, ThinkingConfigDisabled, ThinkingConfigEnabled
 
     if max_thinking_tokens == "adaptive":
-        return ThinkingConfigAdaptive(type="adaptive")
+        return ThinkingConfigAdaptive()
     if max_thinking_tokens == 0:
-        return ThinkingConfigDisabled(type="disabled")
+        return ThinkingConfigDisabled()
     if max_thinking_tokens:
-        return ThinkingConfigEnabled(type="enabled", budget_tokens=max_thinking_tokens)
+        return ThinkingConfigEnabled(budget_tokens=max_thinking_tokens)
     return None
+
+
+def to_prompt_input(content: Sequence[UserContent]) -> Iterator[UserPrompt]:
+    for item in content:
+        match item:
+            case BinaryContent(media_type=mime, base64=b64) if item.is_image:
+                yield UserImagePrompt(image_data=b64, media_type=mime)  # type: ignore[arg-type]
+            case BinaryContent(media_type=mime, base64=b64) if item.is_document:
+                yield UserDocumentPrompt(document_data=b64, media_type=mime)  # type: ignore[arg-type]
+            case ImageUrl(url=url):
+                yield UserImageURLPrompt(url=url)
+            case FileUrl(url=url, identifier=identifier):
+                yield UserDocumentURLPrompt(url=url, title=identifier)
+            case _ as other_content:
+                yield UserTextPrompt(str(other_content))
 
 
 def to_run_usage(usage_dict: Usage) -> RunUsage:

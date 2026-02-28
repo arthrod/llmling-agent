@@ -86,6 +86,7 @@ from agentpool.agents.claude_code_agent.converters import (
     convert_mcp_servers_to_sdk_format,
     convert_to_opencode_metadata,
     to_finish_reason,
+    to_prompt_input,
     to_request_usage,
     to_run_usage,
     to_thinking_config,
@@ -819,11 +820,10 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
             raise AgentNotInitializedError
         # Get pending parts from conversation (staged content)
         # Combine pending parts with new prompts, then join into single string for Claude SDK
-        prompt_text = " ".join(str(p) for p in prompts)
         run_id = str(uuid.uuid4())
         assert self.session_id is not None  # Initialized by BaseAgent.run_stream()
         yield RunStartedEvent(session_id=self.session_id, run_id=run_id, agent_name=self.name)
-        request = ModelRequest(parts=[UserPromptPart(content=prompt_text)])
+        request = ModelRequest(parts=[UserPromptPart(content=prompts)])
         model_messages: list[ModelResponse | ModelRequest] = [request]
         current_response_parts: list[TextPart | ThinkingPart | ToolCallPart] = []
         pending_tool_calls: dict[str, ToolUseBlock] = {}
@@ -846,7 +846,8 @@ class ClaudeCodeAgent[TDeps = None, TResult = str](BaseAgent[TDeps, TResult]):
 
         # Set deps/input_provider on tool bridge (ContextVar doesn't work - separate task)
         try:
-            await client.query(prompt_text)
+            claude_prompts = [*to_prompt_input(prompts)]
+            await client.query(*claude_prompts)
             # Capture SDK session ID from init message
             stream = client.receive_response()
             first_msg = await anext(stream)
