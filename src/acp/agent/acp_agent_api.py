@@ -87,7 +87,7 @@ class ACPAgentAPI:
         """Create a new ACP session."""
         request = NewSessionRequest(
             cwd=cwd or str(Path.cwd()),
-            mcp_servers=list(mcp_servers) if mcp_servers else None,
+            mcp_servers=list(mcp_servers) if mcp_servers is not None else [],
         )
         return await self.connection.new_session(request)
 
@@ -101,7 +101,7 @@ class ACPAgentAPI:
         request = LoadSessionRequest(
             session_id=session_id,
             cwd=cwd,
-            mcp_servers=list(mcp_servers) if mcp_servers else None,
+            mcp_servers=list(mcp_servers) if mcp_servers is not None else [],
         )
         return await self.connection.load_session(request)
 

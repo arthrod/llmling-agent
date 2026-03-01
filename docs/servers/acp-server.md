@@ -143,6 +143,23 @@ agents:
 - `fast-agent` - Fast Agent
 - `openhands` - OpenHands
 
+### OpenCode with password-protected localhost server
+
+When using OpenCode through ACP against a local server on `localhost:4096`:
+
+- Set `OPENCODE_SERVER_PASSWORD` only on the **server** process (`opencode web`)
+- Set only `OPENCODE_API_URL` on the **ACP client** process (`agentpool run` / `opencode acp`)
+
+```bash
+# Terminal 1 (server)
+OPENCODE_SERVER_PASSWORD=<password> opencode web --port 4096
+
+# Terminal 2 (ACP client via AgentPool)
+OPENCODE_API_URL=http://localhost:4096 agentpool run sonnet_writer "Write a sonnet" --config config.yml
+```
+
+Passing `OPENCODE_SERVER_PASSWORD` to the ACP client subprocess can cause OpenCode ACP session initialization to fail.
+
 ## Execution Environments
 
 ACP agents can run in different environments:
